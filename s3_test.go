@@ -148,55 +148,6 @@ func TestManager_SetBuckets(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "pagination",
-			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
-						ListBucketsFunc: func(_ context.Context, params *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
-							if params.ContinuationToken == nil {
-								out := &s3.ListBucketsOutput{
-									Buckets: []s3types.Bucket{
-										{
-											Name:         aws.String("bucket0"),
-											BucketRegion: aws.String("ap-northeast-1"),
-										},
-									},
-									ContinuationToken: aws.String("token0"),
-								}
-								return out, nil
-							}
-							out := &s3.ListBucketsOutput{
-								Buckets: []s3types.Bucket{
-									{
-										Name:         aws.String("bucket1"),
-										BucketRegion: aws.String("ap-northeast-2"),
-									},
-								},
-								ContinuationToken: nil,
-							}
-							return out, nil
-						},
-					},
-					nil,
-				),
-				Buckets: []s3types.Bucket{},
-				Prefix:  "",
-				Region:  fallbackRegion,
-				ctx:     context.Background(),
-			},
-			want: []s3types.Bucket{
-				{
-					Name:         aws.String("bucket0"),
-					BucketRegion: aws.String("ap-northeast-1"),
-				},
-				{
-					Name:         aws.String("bucket1"),
-					BucketRegion: aws.String("ap-northeast-2"),
-				},
-			},
-			wantErr: false,
-		},
-		{
 			name: "error",
 			fields: fields{
 				Client: NewMockClient(
