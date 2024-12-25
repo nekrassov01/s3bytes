@@ -73,3 +73,80 @@ func Test_cli(t *testing.T) {
 		})
 	}
 }
+
+func TestApp_sort(t *testing.T) {
+	app := &app{}
+	metrics := []Metric{
+		&SizeMetric{
+			BucketName:    "bucket-c",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         150,
+			ReadableBytes: "150B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-a",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         200,
+			ReadableBytes: "200B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-b",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         200,
+			ReadableBytes: "200B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-d",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         100,
+			ReadableBytes: "100B",
+		},
+	}
+	sorted := []Metric{
+		&SizeMetric{
+			BucketName:    "bucket-a",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         200,
+			ReadableBytes: "200 B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-b",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         200,
+			ReadableBytes: "200 B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-c",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         150,
+			ReadableBytes: "150 B",
+		},
+		&SizeMetric{
+			BucketName:    "bucket-d",
+			Region:        "ap-northeast-1",
+			StorageType:   StorageTypeStandardStorage,
+			Bytes:         100,
+			ReadableBytes: "100 B",
+		},
+	}
+	app.sort(metrics)
+	for i, metric := range metrics {
+		var (
+			got  = metric.(*SizeMetric)
+			want = sorted[i].(*SizeMetric)
+		)
+		if got.Bytes != want.Bytes {
+			t.Errorf("Metric[%d] Bytes = %v, want %v", i, got.Bytes, want.Bytes)
+		}
+		if got.BucketName != want.BucketName {
+			t.Errorf("Metric[%d] BucketName = %v, want %v", i, got.BucketName, want.BucketName)
+		}
+	}
+}
