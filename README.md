@@ -135,6 +135,7 @@ Todo
 ----
 
 - [ ] Add code comment
+- [ ] Support directory buckets if possible
 
 Author
 ------
