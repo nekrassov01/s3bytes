@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+// SetBuckets sets the buckets.
 func (man *Manager) SetBuckets() error {
 	in := &s3.ListBucketsInput{
 		BucketRegion: aws.String(man.Region),

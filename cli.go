@@ -28,6 +28,7 @@ type app struct {
 	output      *cli.StringFlag
 }
 
+// CLI is the entry point for the CLI.
 func CLI(ctx context.Context) {
 	app := newApp(os.Stdout, os.Stderr)
 	if err := app.RunContext(ctx, os.Args); err != nil {

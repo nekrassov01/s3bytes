@@ -12,6 +12,7 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+// SetQueries sets the metric data queries for the cloudwatch client.
 // https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html
 func (man *Manager) SetQueries() error {
 	if man.MetricName == MetricNameBucketSizeBytes && man.StorageType == StorageTypeAllStorageTypes {
@@ -65,6 +66,7 @@ func (man *Manager) SetQueries() error {
 	return nil
 }
 
+// SetData sets the metric data for the cloudwatch client.
 func (man *Manager) SetData() error {
 	var (
 		startTime = aws.Time(time.Now().Add(-48 * time.Hour))

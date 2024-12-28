@@ -134,7 +134,7 @@ s3bytes -c bash|zsh|pwsh
 Todo
 ----
 
-- [ ] Add code comment
+- [x] Add code comment
 - [ ] Support directory buckets if possible
 
 Author

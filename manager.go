@@ -11,6 +11,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// Manager is a manager struct for the s3bytes package.
 type Manager struct {
 	*Client
 
@@ -26,6 +27,7 @@ type Manager struct {
 	ctx         context.Context
 }
 
+// NewManager creates a new manager.
 func NewManager(ctx context.Context, client *Client, region, prefix, expr string, metricName MetricName, storageType StorageType) (*Manager, error) {
 	man := &Manager{
 		Client:      client,
@@ -48,11 +50,13 @@ func NewManager(ctx context.Context, client *Client, region, prefix, expr string
 	return man, nil
 }
 
+// String returns a string representation of the manager.
 func (man *Manager) String() string {
 	b, _ := json.MarshalIndent(man, "", "  ")
 	return string(b)
 }
 
+// Debug prints a debug message.
 func (man *Manager) Debug() {
 	logger.Debug(man.Region + newLine + man.String() + newLine)
 }

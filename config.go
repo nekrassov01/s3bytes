@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	// Version is the current version of s3bytes.
 	Version string = "0.0.2"
 )
 
@@ -46,6 +47,7 @@ var (
 	}
 )
 
+// LoadAWSConfig loads the AWS configuration.
 func LoadAWSConfig(ctx context.Context, profile string, logger logging.Logger, logMode aws.ClientLogMode) (aws.Config, error) {
 	opts := make([]func(*config.LoadOptions) error, 0, 3)
 	if logger != nil {

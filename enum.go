@@ -49,16 +49,27 @@ func parseShell(s string) (shell, error) {
 	}
 }
 
+// OutputType represents the output type of the renderer.
 type OutputType int
 
 const (
+	// OutputTypeJSON represents the JSON output type.
 	OutputTypeJSON OutputType = iota
+
+	// OutputTypeText represents the text output type.
 	OutputTypeText
+
+	// OutputTypeMarkdown represents the markdown output type.
 	OutputTypeMarkdown
+
+	// OutputTypeBacklog represents the backlog output type.
 	OutputTypeBacklog
+
+	// OutputTypeTSV represents the TSV output type.
 	OutputTypeTSV
 )
 
+// String returns the string representation of the output type.
 func (t OutputType) String() string {
 	switch t {
 	case OutputTypeJSON:
@@ -76,10 +87,12 @@ func (t OutputType) String() string {
 	}
 }
 
+// MarshalJSON returns the JSON representation of the output type.
 func (t OutputType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// ParseOutputType parses the output type from the string representation.
 func ParseOutputType(s string) (OutputType, error) {
 	switch s {
 	case OutputTypeJSON.String():
@@ -97,13 +110,18 @@ func ParseOutputType(s string) (OutputType, error) {
 	}
 }
 
+// MetricName represents the metric name.
 type MetricName int
 
 const (
+	// MetricNameBucketSizeBytes represents the bucket size in bytes.
 	MetricNameBucketSizeBytes MetricName = iota
+
+	// MetricNameNumberOfObjects represents the number of objects in the bucket.
 	MetricNameNumberOfObjects
 )
 
+// String returns the string representation of the metric name.
 func (t MetricName) String() string {
 	switch t {
 	case MetricNameBucketSizeBytes:
@@ -115,10 +133,12 @@ func (t MetricName) String() string {
 	}
 }
 
+// MarshalJSON returns the JSON representation of the metric name.
 func (t MetricName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// ParseMetricName parses the metric name from the string representation.
 func ParseMetricName(s string) (MetricName, error) {
 	switch s {
 	case MetricNameBucketSizeBytes.String():
@@ -130,6 +150,7 @@ func ParseMetricName(s string) (MetricName, error) {
 	}
 }
 
+// StorageType represents the storage type.
 // https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html#s3-cloudwatch-metrics
 type StorageType int
 
@@ -189,6 +210,7 @@ const (
 	StorageTypeAllStorageTypes
 )
 
+// String returns the string representation of the storage type.
 func (t StorageType) String() string {
 	switch t {
 	// S3 Standard:
@@ -264,10 +286,12 @@ func (t StorageType) String() string {
 	}
 }
 
+// MarshalJSON returns the JSON representation of the storage type.
 func (t StorageType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.String())
 }
 
+// ParseStorageType parses the storage type from the string representation.
 func ParseStorageType(s string) (StorageType, error) {
 	switch s {
 	// S3 Standard.String():

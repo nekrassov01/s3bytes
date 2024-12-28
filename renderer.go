@@ -10,6 +10,7 @@ import (
 	"github.com/nekrassov01/mintab"
 )
 
+// Renderer is a renderer struct for the s3bytes package.
 type Renderer struct {
 	Metrics    []Metric
 	MetricName MetricName
@@ -18,6 +19,7 @@ type Renderer struct {
 	w io.Writer
 }
 
+// NewRenderer creates a new renderer.
 func NewRenderer(w io.Writer, metrics []Metric, metricName MetricName, outputType OutputType) *Renderer {
 	return &Renderer{
 		Metrics:    metrics,
@@ -27,11 +29,13 @@ func NewRenderer(w io.Writer, metrics []Metric, metricName MetricName, outputTyp
 	}
 }
 
+// String returns a string representation of the renderer.
 func (ren *Renderer) String() string {
 	b, _ := json.MarshalIndent(ren, "", "  ")
 	return string(b)
 }
 
+// Render renders the metrics.
 func (ren *Renderer) Render() error {
 	switch ren.OutputType {
 	case OutputTypeJSON:
