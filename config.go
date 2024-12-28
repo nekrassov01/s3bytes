@@ -18,7 +18,6 @@ const (
 	canonicalName  string            = "S3BYTES"
 	fallbackRegion string            = "us-east-1"
 	logMode        aws.ClientLogMode = aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
-	newLine        string            = "\n"
 )
 
 var (

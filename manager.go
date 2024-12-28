@@ -58,7 +58,7 @@ func (man *Manager) String() string {
 
 // Debug prints a debug message.
 func (man *Manager) Debug() {
-	logger.Debug(man.Region + newLine + man.String() + newLine)
+	logger.Debug(man.Region + "\n" + man.String() + "\n")
 }
 
 func (man *Manager) eval(expr string) (func(float64) bool, error) {
