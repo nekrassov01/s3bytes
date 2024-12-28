@@ -5,14 +5,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/charmbracelet/log"
+	"github.com/aws/smithy-go/logging"
 )
 
 func TestLoadAWSConfig(t *testing.T) {
 	type args struct {
-		ctx      context.Context
-		profile  string
-		loglevel log.Level
+		ctx     context.Context
+		profile string
 	}
 	tests := []struct {
 		name    string
@@ -23,16 +22,14 @@ func TestLoadAWSConfig(t *testing.T) {
 		{
 			name: "success",
 			args: args{
-				profile:  "",
-				loglevel: log.DebugLevel,
+				profile: "",
 			},
 			wantErr: false,
 		},
 		{
 			name: "error",
 			args: args{
-				profile:  "invalid-profile",
-				loglevel: log.DebugLevel,
+				profile: "invalid-profile",
 			},
 			wantErr: true,
 		},
@@ -40,7 +37,7 @@ func TestLoadAWSConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
-			_, err := LoadAWSConfig(tt.args.ctx, w, tt.args.profile, tt.args.loglevel)
+			_, err := LoadAWSConfig(tt.args.ctx, tt.args.profile, logging.NewStandardLogger(w), logMode)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LoadAWSConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return

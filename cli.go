@@ -8,10 +8,12 @@ import (
 	"sort"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/charmbracelet/log"
+	"github.com/nekrassov01/logwrapper/log"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sync/errgroup"
 )
+
+var logger *log.AppLogger
 
 type app struct {
 	*cli.App
@@ -29,14 +31,12 @@ type app struct {
 func CLI(ctx context.Context) {
 	app := newApp(os.Stdout, os.Stderr)
 	if err := app.RunContext(ctx, os.Args); err != nil {
-		log.Error(err)
+		logger.Error(err)
 		os.Exit(1)
 	}
 }
 
 func newApp(w, ew io.Writer) *app {
-	logger := newAppLogger(ew)
-	log.SetDefault(logger)
 	a := app{}
 	a.completion = &cli.StringFlag{
 		Name:    "completion",
@@ -110,12 +110,14 @@ func newApp(w, ew io.Writer) *app {
 }
 
 func (a *app) before(c *cli.Context) error {
-	level, err := log.ParseLevel(c.String(a.loglevel.Name))
-	if err != nil {
-		return err
-	}
-	log.SetLevel(level)
-	cfg, err := LoadAWSConfig(c.Context, a.ErrWriter, c.String(a.profile.Name), level)
+	var (
+		level     = c.String(a.loglevel.Name)
+		styles    = log.LabeledStyle.String()
+		appLogger = log.NewAppLogger(a.ErrWriter, level, styles, canonicalName)
+		sdkLogger = log.NewSDKLogger(a.ErrWriter, level, styles, "SDK")
+	)
+	logger = appLogger
+	cfg, err := LoadAWSConfig(c.Context, c.String(a.profile.Name), sdkLogger, logMode)
 	if err != nil {
 		return err
 	}
@@ -131,7 +133,7 @@ func (a *app) action(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("started: metric name: %s, storage type: %s, output: %s", metricName, storageType, outputType))
+	logger.Info(fmt.Sprintf("started: metric name: %s, storage type: %s, output: %s", metricName, storageType, outputType))
 	metrics, err := a.run(c, metricName, storageType)
 	if err != nil {
 		return err
@@ -140,7 +142,7 @@ func (a *app) action(c *cli.Context) error {
 	if err := a.render(metrics, metricName, outputType); err != nil {
 		return err
 	}
-	log.Info("completed")
+	logger.Info("completed")
 	return nil
 }
 

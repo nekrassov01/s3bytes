@@ -9,7 +9,6 @@ import (
 
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/charmbracelet/log"
 )
 
 type Manager struct {
@@ -55,7 +54,7 @@ func (man *Manager) String() string {
 }
 
 func (man *Manager) Debug() {
-	log.Debug(man.Region + newLine + man.String() + newLine)
+	logger.Debug(man.Region + newLine + man.String() + newLine)
 }
 
 func (man *Manager) eval(expr string) (func(float64) bool, error) {

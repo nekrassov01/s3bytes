@@ -2,11 +2,10 @@ package s3bytes
 
 import (
 	"context"
-	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/charmbracelet/log"
+	"github.com/aws/smithy-go/logging"
 )
 
 const (
@@ -14,10 +13,11 @@ const (
 )
 
 const (
-	appName        string = "s3bytes"
-	canonicalName  string = "S3BYTES"
-	fallbackRegion string = "us-east-1"
-	newLine        string = "\n"
+	appName        string            = "s3bytes"
+	canonicalName  string            = "S3BYTES"
+	fallbackRegion string            = "us-east-1"
+	logMode        aws.ClientLogMode = aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
+	newLine        string            = "\n"
 )
 
 var (
@@ -46,12 +46,10 @@ var (
 	}
 )
 
-func LoadAWSConfig(ctx context.Context, w io.Writer, profile string, loglevel log.Level) (aws.Config, error) {
-	logger := newSDKLogger(w, loglevel)
-	mode := aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
-	opts := []func(*config.LoadOptions) error{
-		config.WithLogger(logger),
-		config.WithClientLogMode(mode),
+func LoadAWSConfig(ctx context.Context, profile string, logger logging.Logger, logMode aws.ClientLogMode) (aws.Config, error) {
+	opts := make([]func(*config.LoadOptions) error, 0, 3)
+	if logger != nil {
+		opts = append(opts, config.WithLogger(logger), config.WithClientLogMode(logMode))
 	}
 	if profile != "" {
 		opts = append(opts, config.WithSharedConfigProfile(profile))
