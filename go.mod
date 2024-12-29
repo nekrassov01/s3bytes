@@ -1,6 +1,6 @@
 module github.com/nekrassov01/s3bytes
 
-go 1.23.2
+go 1.23.4
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.7
