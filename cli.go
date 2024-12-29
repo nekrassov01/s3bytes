@@ -111,13 +111,13 @@ func newApp(w, ew io.Writer) *app {
 }
 
 func (a *app) before(c *cli.Context) error {
-	var (
-		level     = c.String(a.loglevel.Name)
-		styles    = log.LabeledStyle.String()
-		appLogger = log.NewAppLogger(a.ErrWriter, level, styles, canonicalName)
-		sdkLogger = log.NewSDKLogger(a.ErrWriter, level, styles, "SDK")
-	)
-	logger = appLogger
+	level, err := log.ParseLevel(c.String(a.loglevel.Name))
+	if err != nil {
+		level = log.InfoLevel // if the log level is invalid, default to info
+	}
+	styles := log.LabeledStyles()
+	logger = log.NewAppLogger(a.ErrWriter, level, styles, canonicalName)
+	sdkLogger := log.NewSDKLogger(a.ErrWriter, level, styles, "SDK")
 	cfg, err := LoadAWSConfig(c.Context, c.String(a.profile.Name), sdkLogger, logMode)
 	if err != nil {
 		return err

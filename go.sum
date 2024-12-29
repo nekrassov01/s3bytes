@@ -69,6 +69,8 @@ github.com/muesli/termenv v0.15.2 h1:GohcuySI0QmI3wN8Ok9PtKGkgkFIk7y6Vpb5PvrY+Wo
 github.com/muesli/termenv v0.15.2/go.mod h1:Epx+iuz8sNs7mNKhxzH4fWXGNpZwUaJKRS1noLXviQ8=
 github.com/nekrassov01/logwrapper v0.0.4 h1:8Jf8Kp3cUDOAocmFNZHkebjWsVoXSDlJyRVzcS6Iqls=
 github.com/nekrassov01/logwrapper v0.0.4/go.mod h1:kEf/vpvQx7YqT5iu3oEJOJnVsz5ZgBwpLVl0+dPMg2s=
+github.com/nekrassov01/logwrapper v0.0.5 h1:/bR3cOPZiz2Tjg1XTA9dawsXgc9WWl9Q158fRseUoCw=
+github.com/nekrassov01/logwrapper v0.0.5/go.mod h1:kEf/vpvQx7YqT5iu3oEJOJnVsz5ZgBwpLVl0+dPMg2s=
 github.com/nekrassov01/mintab v0.0.53 h1:Of6/UglkPX9l3PIrSCIdwla2Yv3v99X9Mb45NFGDfYk=
 github.com/nekrassov01/mintab v0.0.53/go.mod h1:jIZGBd3fLAf3v/8TG66HDJ3hPiYQ+HFuyg7+OV6GRoQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.71.0
 	github.com/aws/smithy-go v1.22.1
 	github.com/dustin/go-humanize v1.0.1
-	github.com/nekrassov01/logwrapper v0.0.4
+	github.com/nekrassov01/logwrapper v0.0.5
 	github.com/nekrassov01/mintab v0.0.53
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/sync v0.10.0
