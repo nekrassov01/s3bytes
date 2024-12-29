@@ -117,6 +117,7 @@ func (a *app) before(c *cli.Context) error {
 		return err
 	}
 	logger.SetLevel(level)
+	logger.SetReportCaller(level == log.DebugLevel)
 	sdkLogger := log.NewSDKLogger(a.ErrWriter, level, log.LabeledStyles(), "SDK")
 	cfg, err := LoadAWSConfig(c.Context, c.String(a.profile.Name), sdkLogger, logMode)
 	if err != nil {
