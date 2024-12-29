@@ -6,11 +6,11 @@ import (
 	"io"
 	"os"
 	"sort"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/nekrassov01/logwrapper/log"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/sync/errgroup"
 )
 
 var logger *log.AppLogger
@@ -182,54 +182,71 @@ func (a *app) parse(c *cli.Context) (MetricName, StorageType, OutputType, error)
 
 func (a *app) run(c *cli.Context, metricName MetricName, storageType StorageType) ([]Metric, error) {
 	var (
-		eg, ctx    = errgroup.WithContext(c.Context)
-		metricChan = make(chan []Metric, len(regions))
-		errorChan  = make(chan error, 1)
-		cfg        = a.Metadata["config"].(aws.Config)
-		client     = NewClient(cfg)
+		ctx, cancel = context.WithCancel(c.Context)
+		cfg         = a.Metadata["config"].(aws.Config)
+		client      = NewClient(cfg)
+		regions     = c.StringSlice(a.regions.Name)
+		metrics     = make([]Metric, 0, len(regions)*maxQueries*2)
+		metricChan  = make(chan []Metric, maxQueries*2)
+		errorChan   = make(chan error, 1)
+		wg          = sync.WaitGroup{}
 	)
-	for _, region := range c.StringSlice(a.regions.Name) {
+	defer cancel()
+	for _, region := range regions {
 		region := region
-		eg.Go(func() error {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cancelFunc := func(err error) {
+				select {
+				case errorChan <- err:
+				default:
+				}
+				cancel()
+			}
 			man, err := NewManager(ctx, client, region, c.String(a.prefix.Name), c.String(a.expression.Name), metricName, storageType)
 			if err != nil {
-				return err
+				cancelFunc(err)
+				return
 			}
 			if err := man.SetBuckets(); err != nil {
-				return err
+				cancelFunc(err)
+				return
 			}
 			if err := man.SetQueries(); err != nil {
-				return err
+				cancelFunc(err)
+				return
 			}
 			if err := man.SetData(); err != nil {
-				return err
+				cancelFunc(err)
+				return
 			}
 			man.Debug()
 			select {
 			case metricChan <- man.Metrics:
-				return nil
 			case <-ctx.Done():
-				return ctx.Err()
+				return
 			}
-		})
+		}()
 	}
 	go func() {
-		if err := eg.Wait(); err != nil {
-			select {
-			case errorChan <- err:
-			default:
-			}
-		}
+		wg.Wait()
 		close(metricChan)
 	}()
-	metrics := make([]Metric, 0, len(regions)*maxQueries)
-	for m := range metricChan {
-		metrics = append(metrics, m...)
-	}
-	select {
-	case err := <-errorChan:
-		return nil, err
-	default:
+	for {
+		select {
+		case m, ok := <-metricChan:
+			if !ok {
+				metricChan = nil
+			} else {
+				metrics = append(metrics, m...)
+			}
+		case err := <-errorChan:
+			return nil, err
+		}
+		if metricChan == nil {
+			break
+		}
 	}
 	return metrics, nil
 }

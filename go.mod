@@ -12,7 +12,6 @@ require (
 	github.com/nekrassov01/logwrapper v0.0.5
 	github.com/nekrassov01/mintab v0.0.53
 	github.com/urfave/cli/v2 v2.27.5
-	golang.org/x/sync v0.10.0
 )
 
 require (

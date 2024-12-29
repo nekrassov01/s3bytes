@@ -40,7 +40,7 @@ func Test_cli(t *testing.T) {
 		{
 			name:    "unknown log level",
 			args:    []string{appName, "-l", "unknown"},
-			wantErr: true,
+			wantErr: false, // if the log level is invalid, default to info
 		},
 		{
 			name:    "unknown region",
