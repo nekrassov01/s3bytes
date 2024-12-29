@@ -10,7 +10,7 @@ import (
 
 const (
 	// Version is the current version of s3bytes.
-	Version string = "0.0.3"
+	Version string = "0.0.4"
 )
 
 const (
