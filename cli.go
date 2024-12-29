@@ -38,6 +38,7 @@ func CLI(ctx context.Context) {
 }
 
 func newApp(w, ew io.Writer) *app {
+	logger = log.NewAppLogger(ew, log.InfoLevel, log.LabeledStyles(), canonicalName)
 	a := app{}
 	a.completion = &cli.StringFlag{
 		Name:    "completion",
@@ -113,11 +114,10 @@ func newApp(w, ew io.Writer) *app {
 func (a *app) before(c *cli.Context) error {
 	level, err := log.ParseLevel(c.String(a.loglevel.Name))
 	if err != nil {
-		level = log.InfoLevel // if the log level is invalid, default to info
+		return err
 	}
-	styles := log.LabeledStyles()
-	logger = log.NewAppLogger(a.ErrWriter, level, styles, canonicalName)
-	sdkLogger := log.NewSDKLogger(a.ErrWriter, level, styles, "SDK")
+	logger.SetLevel(level)
+	sdkLogger := log.NewSDKLogger(a.ErrWriter, level, log.LabeledStyles(), "SDK")
 	cfg, err := LoadAWSConfig(c.Context, c.String(a.profile.Name), sdkLogger, logMode)
 	if err != nil {
 		return err
