@@ -47,22 +47,23 @@ JSON format
     "Region": "ap-northeast-1",
     "StorageType": "StandardStorage",
     "Bytes": 23373655,
-    "Readable": "23 MiB"
+    "ReadableBytes": "23 MiB"
   },
   {
     "BucketName": "bucket1",
     "Region": "ap-northeast-2",
     "StorageType": "StandardStorage",
     "Bytes": 134614,
-    "Readable": "135 KiB"
+    "ReadableBytes": "135 KiB"
   },
   {
     "BucketName": "bucket2",
     "Region": "us-east-1",
     "StorageType": "StandardStorage",
     "Bytes": 0,
-    "Readable": "0 B"
+    "ReadableBytes": "0 B"
   }
+]
 ```
 
 Text table format
