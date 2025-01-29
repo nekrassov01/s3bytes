@@ -7,38 +7,40 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"golang.org/x/sync/semaphore"
 )
 
-func TestManager_SetBuckets(t *testing.T) {
+func TestManager_getBuckets(t *testing.T) {
 	type fields struct {
 		Client      *Client
-		Buckets     []s3types.Bucket
-		Batches     [][]cwtypes.MetricDataQuery
-		Metrics     []Metric
 		MetricName  MetricName
 		StorageType StorageType
-		MaxQueries  int
-		Prefix      string
-		Region      string
+		Prefix      *string
+		Regions     []string
+		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
 		ctx         context.Context
+	}
+	type args struct {
+		region string
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		want    []s3types.Bucket
+		args    args
+		want    []types.Bucket
 		wantErr bool
 	}{
 		{
 			name: "single bucket",
 			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
+				Client: newMockClient(
+					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
-								Buckets: []s3types.Bucket{
+								Buckets: []types.Bucket{
 									{
 										Name:         aws.String("bucket0"),
 										BucketRegion: aws.String("ap-northeast-1"),
@@ -51,12 +53,10 @@ func TestManager_SetBuckets(t *testing.T) {
 					},
 					nil,
 				),
-				Buckets: []s3types.Bucket{},
-				Prefix:  "",
-				Region:  fallbackRegion,
-				ctx:     context.Background(),
+				Prefix: nil,
+				ctx:    context.Background(),
 			},
-			want: []s3types.Bucket{
+			want: []types.Bucket{
 				{
 					Name:         aws.String("bucket0"),
 					BucketRegion: aws.String("ap-northeast-1"),
@@ -67,11 +67,11 @@ func TestManager_SetBuckets(t *testing.T) {
 		{
 			name: "multiple bucket",
 			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
+				Client: newMockClient(
+					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
-								Buckets: []s3types.Bucket{
+								Buckets: []types.Bucket{
 									{
 										Name:         aws.String("bucket0"),
 										BucketRegion: aws.String("ap-northeast-1"),
@@ -88,54 +88,10 @@ func TestManager_SetBuckets(t *testing.T) {
 					},
 					nil,
 				),
-				Buckets: []s3types.Bucket{},
-				Prefix:  "",
-				Region:  fallbackRegion,
-				ctx:     context.Background(),
+				Prefix: nil,
+				ctx:    context.Background(),
 			},
-			want: []s3types.Bucket{
-				{
-					Name:         aws.String("bucket0"),
-					BucketRegion: aws.String("ap-northeast-1"),
-				},
-				{
-					Name:         aws.String("bucket1"),
-					BucketRegion: aws.String("ap-northeast-2"),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "prefix",
-			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
-						ListBucketsFunc: func(_ context.Context, params *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
-							params.Prefix = aws.String("bucket")
-							out := &s3.ListBucketsOutput{
-								Buckets: []s3types.Bucket{
-									{
-										Name:         aws.String("bucket0"),
-										BucketRegion: aws.String("ap-northeast-1"),
-									},
-									{
-										Name:         aws.String("bucket1"),
-										BucketRegion: aws.String("ap-northeast-2"),
-									},
-								},
-								ContinuationToken: nil,
-							}
-							return out, nil
-						},
-					},
-					nil,
-				),
-				Buckets: []s3types.Bucket{},
-				Prefix:  "bucket",
-				Region:  fallbackRegion,
-				ctx:     context.Background(),
-			},
-			want: []s3types.Bucket{
+			want: []types.Bucket{
 				{
 					Name:         aws.String("bucket0"),
 					BucketRegion: aws.String("ap-northeast-1"),
@@ -150,27 +106,26 @@ func TestManager_SetBuckets(t *testing.T) {
 		{
 			name: "error",
 			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
+				Client: newMockClient(
+					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							return nil, errors.New("failed to list buckets")
 						},
 					},
 					nil,
 				),
-				Buckets: []s3types.Bucket{},
 			},
-			want:    []s3types.Bucket{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
 			name: "no buckets",
 			fields: fields{
-				Client: NewMockClient(
-					&MockS3{
+				Client: newMockClient(
+					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
-								Buckets:           []s3types.Bucket{},
+								Buckets:           []types.Bucket{},
 								ContinuationToken: nil,
 							}
 							return out, nil
@@ -178,26 +133,30 @@ func TestManager_SetBuckets(t *testing.T) {
 					},
 					nil,
 				),
-				Buckets: []s3types.Bucket{},
 			},
-			want:    []s3types.Bucket{},
+			want:    []types.Bucket{},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:  tt.fields.Client,
-				Buckets: tt.fields.Buckets,
-				Prefix:  tt.fields.Prefix,
-				Region:  tt.fields.Region,
-				ctx:     tt.fields.ctx,
+				Client:      tt.fields.Client,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
+				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
+				ctx:         tt.fields.ctx,
 			}
-			if err := man.SetBuckets(); (err != nil) != tt.wantErr {
-				t.Errorf("Manager.SetBuckets() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := man.getBuckets(tt.args.region)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Manager.getBuckets() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if !reflect.DeepEqual(man.Buckets, tt.want) {
-				t.Errorf("Manager.SetBuckets() = %v, want %v", man.Buckets, tt.want)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Manager.getBuckets() = %v, want %v", got, tt.want)
 			}
 		})
 	}

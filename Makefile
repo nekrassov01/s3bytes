@@ -4,9 +4,11 @@ ifeq ($(OS),Windows_NT)
 BIN := $(BIN).exe
 endif
 
+CMD_PATH := ./cmd/$(NAME)/
 GOBIN ?= $(shell go env GOPATH)/bin
 VERSION := $$(make -s show-version)
-LDFLAGS := "-s -w -X main.Version=$(VERSION)"
+REVISION := $$(git rev-parse --short HEAD)
+LDFLAGS := "-s -w -X main.Version=$(VERSION) -X main.Revision=$(REVISION)"
 
 HAS_LINT := $(shell command -v $(GOBIN)/golangci-lint 2> /dev/null)
 HAS_VULNCHECK := $(shell command -v $(GOBIN)/govulncheck 2> /dev/null)
@@ -21,7 +23,7 @@ export GO111MODULE=on
 .PHONY: build
 build: clean
 	go mod tidy
-	go build -ldflags $(LDFLAGS) -o $(BIN) ./cmd/$(NAME)/main.go
+	go build -ldflags $(LDFLAGS) -o $(BIN) $(CMD_PATH)
 
 .PHONY: put
 put: build
@@ -77,7 +79,7 @@ govulncheck: deps-govulncheck
 
 .PHONY: show-version
 show-version: deps-gobump
-	$(GOBIN)/gobump show -r .
+	$(GOBIN)/gobump show -r $(CMD_PATH)
 
 .PHONY: check-git
 ifneq ($(shell git status --porcelain),)
@@ -89,7 +91,7 @@ endif
 
 .PHONY: publish
 publish: deps-gobump check-git
-	$(GOBIN)/gobump up -w .
+	$(GOBIN)/gobump up -w $(CMD_PATH)
 	git commit -am "bump up version to $(VERSION)"
 	git push origin main
 

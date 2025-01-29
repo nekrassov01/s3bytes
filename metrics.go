@@ -1,44 +1,47 @@
 package s3bytes
 
-// Metric is an interface for the metrics.
-type Metric interface {
-	Label() string
-	Value() float64
+import (
+	"strconv"
+)
+
+var header = []string{
+	"BucketName",
+	"Region",
+	"MetricName",
+	"StorageType",
+	"Value",
 }
 
-// SizeMetric is a struct for the size metric.
-type SizeMetric struct {
-	BucketName    string
-	Region        string
-	StorageType   StorageType
-	Bytes         float64
-	ReadableBytes string // human readable bytes
+type MetricData struct {
+	Header  []string
+	Metrics []*Metric
+	Total   int64
 }
 
-// Label returns the label of the size metric.
-func (t *SizeMetric) Label() string {
-	return t.BucketName
-}
-
-// Value returns the value of the size metric.
-func (t *SizeMetric) Value() float64 {
-	return t.Bytes
-}
-
-// ObjectMetric is a struct for the object metric.
-type ObjectMetric struct {
+type Metric struct {
 	BucketName  string
 	Region      string
+	MetricName  MetricName
 	StorageType StorageType
-	Objects     float64
+	Value       float64
 }
 
-// Label returns the label of the object metric.
-func (t *ObjectMetric) Label() string {
-	return t.BucketName
+func (t *Metric) toInput() []any {
+	return []any{
+		t.BucketName,
+		t.Region,
+		t.MetricName,
+		t.StorageType,
+		t.Value,
+	}
 }
 
-// Value returns the value of the object metric.
-func (t *ObjectMetric) Value() float64 {
-	return t.Objects
+func (t *Metric) toTSV() []string {
+	return []string{
+		t.BucketName,
+		t.Region,
+		t.MetricName.String(),
+		t.StorageType.String(),
+		strconv.FormatFloat(t.Value, 'f', 0, 64),
+	}
 }

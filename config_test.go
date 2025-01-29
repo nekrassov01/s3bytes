@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"testing"
-
-	"github.com/aws/smithy-go/logging"
 )
 
 func TestLoadAWSConfig(t *testing.T) {
@@ -37,7 +35,7 @@ func TestLoadAWSConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
-			_, err := LoadAWSConfig(tt.args.ctx, tt.args.profile, logging.NewStandardLogger(w), logMode)
+			_, err := LoadConfig(tt.args.ctx, tt.args.profile)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LoadAWSConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return

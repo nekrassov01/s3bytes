@@ -2,121 +2,68 @@ package s3bytes
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"golang.org/x/sync/semaphore"
 )
 
-func generateBuckets(n int) []s3types.Bucket {
-	buckets := make([]s3types.Bucket, n)
-	for i := 0; i < n; i++ {
-		buckets[i] = s3types.Bucket{
-			Name:         aws.String("bucket" + strconv.Itoa(i)),
-			BucketRegion: aws.String("ap-northeast-1"),
-		}
-	}
-	return buckets
-}
-
-func generateQueries(n, maxQueriesPerBatch int) [][]cwtypes.MetricDataQuery {
-	batches := [][]cwtypes.MetricDataQuery{}
-	current := make([]cwtypes.MetricDataQuery, 0, maxQueriesPerBatch)
-	for i := 0; i < n; i++ {
-		query := cwtypes.MetricDataQuery{
-			Id:    aws.String(fmt.Sprintf("m%d", i)),
-			Label: aws.String(fmt.Sprintf("bucket%d", i)),
-			MetricStat: &cwtypes.MetricStat{
-				Metric: &cwtypes.Metric{
-					Namespace:  aws.String("AWS/S3"),
-					MetricName: aws.String("BucketSizeBytes"),
-					Dimensions: []cwtypes.Dimension{
-						{
-							Name:  aws.String("BucketName"),
-							Value: aws.String(fmt.Sprintf("bucket%d", i)),
-						},
-						{
-							Name:  aws.String("StorageType"),
-							Value: aws.String("StandardStorage"),
-						},
-					},
-				},
-				Period: aws.Int32(86400),
-				Stat:   aws.String("Average"),
-			},
-		}
-		current = append(current, query)
-		if len(current) == maxQueriesPerBatch {
-			batches = append(batches, current)
-			current = make([]cwtypes.MetricDataQuery, 0, maxQueriesPerBatch)
-		}
-	}
-	if len(current) > 0 {
-		batches = append(batches, current)
-	}
-	return batches
-}
-
-//	func BenchmarkSetQueries(b *testing.B) {
-//		maxQueriesPerBatch := 100
-//		man := &Manager{
-//			MetricName:  MetricNameBucketSizeBytes,
-//			StorageType: StorageTypeStandardStorage,
-//			Buckets:     generateBuckets(300),
-//			MaxQueries:  maxQueriesPerBatch,
-//		}
-//		b.ResetTimer()
-//		for i := 0; i < b.N; i++ {
-//			if err := man.SetQueries(); err != nil {
-//				b.Fatal(err)
-//			}
-//		}
-//	}
-
-func BenchmarkSetData(b *testing.B) {
-	maxQueriesPerBatch := 100
+func BenchmarkList(b *testing.B) {
+	var (
+		n       = 10
+		buckets = make([]s3types.Bucket, n)
+		name    = aws.String("bucket")
+		region  = aws.String("us-east-1")
+		metrics = make([]cwtypes.MetricDataResult, n)
+		id      = aws.String("m0")
+		label   = aws.String("bucket")
+		values  = []float64{2048}
+	)
 	man := &Manager{
-		Client: NewMockClient(nil, &MockCW{
-			GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
-				out := &cloudwatch.GetMetricDataOutput{
-					MetricDataResults: []cwtypes.MetricDataResult{
-						{
-							Label:  aws.String("bucket0"),
-							Values: []float64{1024, 2048},
-						},
-						{
-							Label:  aws.String("bucket1"),
-							Values: []float64{0},
-						},
-						{
-							Label:  aws.String("bucket2"),
-							Values: []float64{4096, 2048},
-						},
-						{
-							Label:  aws.String("bucket3"),
-							Values: []float64{100},
-						},
-					},
-					NextToken: nil,
-				}
-				return out, nil
+		Client: newMockClient(
+			&mockS3{
+				ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
+					for i := 0; i < n; i++ {
+						buckets[i] = s3types.Bucket{
+							Name:         name,
+							BucketRegion: region,
+						}
+					}
+					out := &s3.ListBucketsOutput{
+						Buckets: buckets,
+					}
+					return out, nil
+				},
 			},
-		}),
-		MetricName:  MetricNameBucketSizeBytes,
-		StorageType: StorageTypeStandardStorage,
-		Buckets:     generateBuckets(300),
-		Batches:     generateQueries(300, maxQueriesPerBatch),
-		MaxQueries:  maxQueriesPerBatch,
+			&mockCloudWatch{
+				GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
+					for i := 0; i < n; i++ {
+						metrics[i] = cwtypes.MetricDataResult{
+							Id:     id,
+							Label:  label,
+							Values: values,
+						}
+					}
+					out := &cloudwatch.GetMetricDataOutput{
+						MetricDataResults: metrics,
+					}
+					return out, nil
+				},
+			}),
+		regions:     []string{"us-east-1"},
+		metricName:  MetricNameBucketSizeBytes,
+		storageType: StorageTypeStandardStorage,
 		filterFunc:  func(float64) bool { return true },
+		sem:         semaphore.NewWeighted(NumWorker),
 		ctx:         context.Background(),
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := man.SetData(); err != nil {
+		if _, err := man.List(); err != nil {
 			b.Fatal(err)
 		}
 	}

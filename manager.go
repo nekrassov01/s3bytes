@@ -3,76 +3,79 @@ package s3bytes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
-	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"golang.org/x/sync/semaphore"
 )
 
 // Manager is a manager struct for the s3bytes package.
 type Manager struct {
-	*Client
+	*Client `json:"-"`
 
-	Buckets     []s3types.Bucket
-	Batches     [][]cwtypes.MetricDataQuery
-	Metrics     []Metric
-	MetricName  MetricName
-	StorageType StorageType
-	MaxQueries  int
-	Prefix      string             // filter prefix for bucket names
-	Region      string             // current region state in process
-	filterFunc  func(float64) bool // filter function for metrics
-	ctx         context.Context
+	metricName  MetricName
+	storageType StorageType
+	prefix      *string
+	regions     []string
+
+	filterFunc func(float64) bool
+	sem        *semaphore.Weighted
+	ctx        context.Context
 }
 
 // NewManager creates a new manager.
-func NewManager(ctx context.Context, client *Client, region, prefix, expr string, metricName MetricName, storageType StorageType) (*Manager, error) {
-	man := &Manager{
-		Client:      client,
-		Buckets:     make([]s3types.Bucket, 0, maxQueries*2),
-		Batches:     make([][]cwtypes.MetricDataQuery, 0, 2),
-		Metrics:     make([]Metric, 0, maxQueries*2),
-		MetricName:  metricName,
-		StorageType: storageType,
-		MaxQueries:  maxQueries,
-		Prefix:      prefix,
-		Region:      region,
-		filterFunc:  func(float64) bool { return true },
-		ctx:         ctx,
+func NewManager(ctx context.Context, client *Client) *Manager {
+	return &Manager{
+		Client:     client,
+		regions:    DefaultRegions,
+		filterFunc: func(float64) bool { return true },
+		sem:        semaphore.NewWeighted(NumWorker),
+		ctx:        ctx,
 	}
-	fn, err := man.eval(expr)
-	if err != nil {
-		return nil, err
+}
+
+// SetRegion sets the specified regions.
+func (man *Manager) SetRegion(regions []string) error {
+	if len(regions) == 0 {
+		return nil
 	}
-	man.filterFunc = fn
-	return man, nil
+	for _, region := range regions {
+		if _, ok := allowedRegions[region]; !ok {
+			return fmt.Errorf("unsupported region: %s", region)
+		}
+	}
+	man.regions = regions
+	return nil
 }
 
-// String returns a string representation of the manager.
-func (man *Manager) String() string {
-	b, _ := json.MarshalIndent(man, "", "  ")
-	return string(b)
+// SetPrefix sets the prefix.
+func (man *Manager) SetPrefix(prefix string) error {
+	if prefix == "" {
+		return nil
+	}
+	if !bucketPrefixPattern.MatchString(prefix) {
+		return fmt.Errorf("invalid prefix: %q", prefix)
+	}
+	man.prefix = aws.String(prefix)
+	return nil
 }
 
-// Debug prints a debug message.
-func (man *Manager) Debug() {
-	logger.Debug(man.Region + "\n" + man.String() + "\n")
-}
-
-func (man *Manager) eval(expr string) (func(float64) bool, error) {
+// SetFilter sets the filter expressions.
+func (man *Manager) SetFilter(expr string) error {
 	if expr == "" {
-		return func(float64) bool { return true }, nil
+		return nil
 	}
 	tokens := strings.SplitN(expr, " ", 2)
 	if len(tokens) < 2 {
-		return nil, fmt.Errorf("invalid syntax: %q", expr)
+		return fmt.Errorf("invalid syntax: %q", expr)
 	}
 	operator := tokens[0]
 	v, err := strconv.ParseFloat(tokens[1], 64)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	operators := map[string]func(float64, float64) bool{
 		">": func(a, b float64) bool {
@@ -96,10 +99,40 @@ func (man *Manager) eval(expr string) (func(float64) bool, error) {
 	}
 	compare, ok := operators[operator]
 	if !ok {
-		return nil, fmt.Errorf("invalid operator: %q", operator)
+		return fmt.Errorf("invalid operator: %q", operator)
 	}
-	fn := func(f float64) bool {
+	man.filterFunc = func(f float64) bool {
 		return compare(f, v)
 	}
-	return fn, nil
+	return nil
+}
+
+// SetMetric sets the metric name and storage type.
+func (man *Manager) SetMetric(metricName MetricName, storageType StorageType) error {
+	if metricName == MetricNameBucketSizeBytes && storageType == StorageTypeAllStorageTypes {
+		return errors.New("BucketSizeBytes metric does not support AllStorageTypes")
+	}
+	if metricName == MetricNameNumberOfObjects && storageType != StorageTypeAllStorageTypes {
+		return errors.New("NumberOfObjects metric only supports AllStorageTypes")
+	}
+	man.metricName = metricName
+	man.storageType = storageType
+	return nil
+}
+
+// String returns a string representation of the manager.
+func (man *Manager) String() string {
+	s := struct {
+		MetricName  string   `json:"metricName"`
+		StorageType string   `json:"storageType"`
+		Prefix      *string  `json:"prefix"`
+		Regions     []string `json:"regions"`
+	}{
+		MetricName:  man.metricName.String(),
+		StorageType: man.storageType.String(),
+		Prefix:      man.prefix,
+		Regions:     man.regions,
+	}
+	b, _ := json.MarshalIndent(s, "", "  ")
+	return string(b)
 }

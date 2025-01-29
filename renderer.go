@@ -1,46 +1,42 @@
 package s3bytes
 
 import (
-	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"io"
-	"strconv"
-	"strings"
 
 	"github.com/nekrassov01/mintab"
 )
 
 // Renderer is a renderer struct for the s3bytes package.
+// OutputType represents the type of the output.
 type Renderer struct {
-	Metrics    []Metric
-	MetricName MetricName
+	Data       *MetricData
 	OutputType OutputType
-
-	w io.Writer
+	w          io.Writer
 }
 
-// NewRenderer creates a new renderer.
-func NewRenderer(w io.Writer, metrics []Metric, metricName MetricName, outputType OutputType) *Renderer {
+// NewRenderer creates a new renderer with the specified parameters.
+func NewRenderer(w io.Writer, data *MetricData, outputType OutputType) *Renderer {
 	return &Renderer{
-		Metrics:    metrics,
-		MetricName: metricName,
+		Data:       data,
 		OutputType: outputType,
 		w:          w,
 	}
 }
 
-// String returns a string representation of the renderer.
+// String returns the string representation of the renderer.
 func (ren *Renderer) String() string {
 	b, _ := json.MarshalIndent(ren, "", "  ")
 	return string(b)
 }
 
-// Render renders the metrics.
+// Render renders the output.
 func (ren *Renderer) Render() error {
 	switch ren.OutputType {
 	case OutputTypeJSON:
 		return ren.toJSON()
-	case OutputTypeText, OutputTypeMarkdown, OutputTypeBacklog:
+	case OutputTypeText, OutputTypeCompressedText, OutputTypeMarkdown, OutputTypeBacklog:
 		return ren.toTable()
 	case OutputTypeTSV:
 		return ren.toTSV()
@@ -52,7 +48,7 @@ func (ren *Renderer) Render() error {
 func (ren *Renderer) toJSON() error {
 	b := json.NewEncoder(ren.w)
 	b.SetIndent("", "  ")
-	return b.Encode(ren.Metrics)
+	return b.Encode(ren.Data.Metrics)
 }
 
 func (ren *Renderer) toTable() error {
@@ -60,6 +56,8 @@ func (ren *Renderer) toTable() error {
 	switch ren.OutputType {
 	case OutputTypeText:
 		opt = mintab.WithFormat(mintab.TextFormat)
+	case OutputTypeCompressedText:
+		opt = mintab.WithFormat(mintab.CompressedTextFormat)
 	case OutputTypeMarkdown:
 		opt = mintab.WithFormat(mintab.MarkdownFormat)
 	case OutputTypeBacklog:
@@ -74,87 +72,27 @@ func (ren *Renderer) toTable() error {
 }
 
 func (ren *Renderer) toTSV() error {
-	buf := &bytes.Buffer{}
-	switch ren.MetricName {
-	case MetricNameBucketSizeBytes:
-		buf.WriteString("BucketName\tRegion\tStorageType\tBytes\tReadableBytes\n")
-		for _, metric := range ren.Metrics {
-			m := metric.(*SizeMetric)
-			s := []string{
-				m.BucketName,
-				m.Region,
-				m.StorageType.String(),
-				strconv.FormatFloat(m.Bytes, 'f', -1, 64),
-				m.ReadableBytes,
-			}
-			buf.WriteString(strings.Join(s, "\t"))
-			buf.WriteString("\n")
-		}
-	case MetricNameNumberOfObjects:
-		buf.WriteString("BucketName\tRegion\tStorageType\tObjects\n")
-		for _, metric := range ren.Metrics {
-			m := metric.(*ObjectMetric)
-			s := []string{
-				m.BucketName,
-				m.Region,
-				m.StorageType.String(),
-				strconv.FormatFloat(m.Objects, 'f', -1, 64),
-			}
-			buf.WriteString(strings.Join(s, "\t"))
-			buf.WriteString("\n")
-		}
-	default:
-	}
-	if _, err := ren.w.Write(buf.Bytes()); err != nil {
+	w := csv.NewWriter(ren.w)
+	w.Comma = '\t'
+	if err := w.Write(ren.Data.Header); err != nil {
 		return err
 	}
-	return nil
+	for _, metric := range ren.Data.Metrics {
+		if err := w.Write(metric.toTSV()); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	return w.Error()
 }
 
 func (ren *Renderer) toInput() mintab.Input {
-	var (
-		header = ([]string)(nil)
-		data   = make([][]any, len(ren.Metrics))
-	)
-	switch ren.MetricName {
-	case MetricNameBucketSizeBytes:
-		header = []string{
-			"BucketName",
-			"Region",
-			"StorageType",
-			"Bytes",
-			"ReadableBytes",
-		}
-		for i, metric := range ren.Metrics {
-			m := metric.(*SizeMetric)
-			data[i] = []any{
-				m.BucketName,
-				m.Region,
-				m.StorageType,
-				m.Bytes,
-				m.ReadableBytes,
-			}
-		}
-	case MetricNameNumberOfObjects:
-		header = []string{
-			"BucketName",
-			"Region",
-			"StorageType",
-			"Objects",
-		}
-		for i, metric := range ren.Metrics {
-			m := metric.(*ObjectMetric)
-			data[i] = []any{
-				m.BucketName,
-				m.Region,
-				m.StorageType,
-				m.Objects,
-			}
-		}
-	default:
+	data := make([][]any, len(ren.Data.Metrics))
+	for i, row := range ren.Data.Metrics {
+		data[i] = row.toInput()
 	}
 	return mintab.Input{
-		Header: header,
+		Header: ren.Data.Header,
 		Data:   data,
 	}
 }

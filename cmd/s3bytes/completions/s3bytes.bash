@@ -13,7 +13,7 @@ _s3bytes() {
     else
         _cli_init_completion -n "=:" || return
     fi
-    cur="${COMP_WORDS[COMP_CWORD]}"
+    cur="${COMP_WORDS[COMP_CloudWatchORD]}"
     if [[ "$cur" == "-"* ]]; then
         comp="${words[*]} ${cur} --generate-bash-completion"
     else

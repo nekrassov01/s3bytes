@@ -45,23 +45,23 @@ JSON format
   {
     "BucketName": "bucket0",
     "Region": "ap-northeast-1",
+    "MetricName": "BucketSizeBytes",
     "StorageType": "StandardStorage",
-    "Bytes": 23373655,
-    "ReadableBytes": "23 MiB"
+    "Value": 23373655,
   },
   {
     "BucketName": "bucket1",
     "Region": "ap-northeast-2",
+    "MetricName": "BucketSizeBytes",
     "StorageType": "StandardStorage",
-    "Bytes": 134614,
-    "ReadableBytes": "135 KiB"
+    "Value": 134614,
   },
   {
     "BucketName": "bucket2",
     "Region": "us-east-1",
+    "MetricName": "BucketSizeBytes",
     "StorageType": "StandardStorage",
-    "Bytes": 0,
-    "ReadableBytes": "0 B"
+    "Value": 0,
   }
 ]
 ```
@@ -70,36 +70,49 @@ Text table format
 
 ```text
 $ s3bytes -o text
-+------------+----------------+-----------------+----------+---------------+
-| BucketName | Region         | StorageType     | Bytes    | ReadableBytes |
-+------------+----------------+-----------------+----------+---------------+
-| bucket0    | ap-northeast-1 | StandardStorage | 23373655 | 23 MiB        |
-+------------+----------------+-----------------+----------+---------------+
-| bucket1    | ap-northeast-2 | StandardStorage |   134614 | 135 KiB       |
-+------------+----------------+-----------------+----------+---------------+
-| bucket2    | us-east-1      | StandardStorage |        0 | 0 B           |
-+------------+----------------+-----------------+----------+---------------+
++------------+----------------+-----------------+-----------------+----------+
+| BucketName | Region         | MetricName      | StorageType     | Value    |
++------------+----------------+-----------------+-----------------+----------+
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage | 23373655 |
++------------+----------------+-----------------+-----------------+----------+
+| bucket1    | ap-northeast-2 | BucketSizeBytes | StandardStorage |   134614 |
++------------+----------------+-----------------+-----------------+----------+
+| bucket2    | us-east-1      | BucketSizeBytes | StandardStorage |        0 |
++------------+----------------+-----------------+-----------------+----------+
+```
+
+Compressed text table format
+
+```text
+$ s3bytes -o compressed
++------------+----------------+-----------------+-----------------+----------+
+| BucketName | Region         | MetricName      | StorageType     | Value    |
++------------+----------------+-----------------+-----------------+----------+
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage | 23373655 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | StandardStorage |   134614 |
+| bucket2    | us-east-1      | BucketSizeBytes | StandardStorage |        0 |
++------------+----------------+-----------------+-----------------+----------+
 ```
 
 Markdown table format
 
 ```text
 $ s3bytes -o markdown
-| BucketName | Region         | StorageType     | Bytes    | ReadableBytes |
-| ---------- | -------------- | --------------- | -------- | ------------- |
-| bucket0    | ap-northeast-1 | StandardStorage | 23373655 | 23 MiB        |
-| bucket1    | ap-northeast-2 | StandardStorage | 134614   | 135 KiB       |
-| bucket2    | us-east-1      | StandardStorage | 0        | 0 B           |
+| BucketName | Region         | MetricName      | StorageType     | Value    |
+| ---------- | -------------- | --------------- | --------------- | -------- |
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage | 23373655 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | StandardStorage | 134614   |
+| bucket2    | us-east-1      | BucketSizeBytes | StandardStorage | 0        |
 ```
 
 Backlog table format
 
 ```text
 $ s3bytes -o backlog
-| BucketName | Region         | StorageType     | Bytes    | ReadableBytes |h
-| bucket0    | ap-northeast-1 | StandardStorage | 23373655 | 23 MiB        |
-| bucket1    | ap-northeast-2 | StandardStorage |   134614 | 135 KiB       |
-| bucket2    | us-east-1      | StandardStorage |        0 | 0 B           |
+| BucketName | Region         | MetricName      | StorageType     | Value    |h
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage | 23373655 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | StandardStorage | 134614   |
+| bucket2    | us-east-1      | BucketSizeBytes | StandardStorage | 0        |
 ```
 
 Installation

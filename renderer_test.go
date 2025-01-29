@@ -6,62 +6,68 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dustin/go-humanize"
+	"github.com/google/go-cmp/cmp"
 )
 
-var sampleSizeMetrics = []Metric{
-	&SizeMetric{
-		BucketName:    "bucket0",
-		Region:        "ap-northeast-1",
-		StorageType:   StorageTypeStandardStorage,
-		Bytes:         1024,
-		ReadableBytes: humanize.IBytes(1024),
-	},
-	&SizeMetric{
-		BucketName:    "bucket1",
-		Region:        "ap-northeast-2",
-		StorageType:   StorageTypeGlacierStorage,
-		Bytes:         4096,
-		ReadableBytes: humanize.IBytes(4096),
+var testSizeMetricData = &MetricData{
+	Header: header,
+	Metrics: []*Metric{
+		{
+			BucketName:  "bucket0",
+			Region:      "ap-northeast-1",
+			MetricName:  MetricNameBucketSizeBytes,
+			StorageType: StorageTypeStandardStorage,
+			Value:       1024,
+		},
+		{
+			BucketName:  "bucket1",
+			Region:      "ap-northeast-2",
+			MetricName:  MetricNameBucketSizeBytes,
+			StorageType: StorageTypeGlacierStorage,
+			Value:       4096,
+		},
 	},
 }
 
-var sampleObjectMetrics = []Metric{
-	&ObjectMetric{
-		BucketName:  "bucket0",
-		Region:      "ap-northeast-1",
-		StorageType: StorageTypeAllStorageTypes,
-		Objects:     20,
-	},
-	&ObjectMetric{
-		BucketName:  "bucket1",
-		Region:      "ap-northeast-2",
-		StorageType: StorageTypeAllStorageTypes,
-		Objects:     0,
+var testObjectMetricData = &MetricData{
+	Header: header,
+	Metrics: []*Metric{
+		{
+			BucketName:  "bucket0",
+			Region:      "ap-northeast-1",
+			MetricName:  MetricNameNumberOfObjects,
+			StorageType: StorageTypeAllStorageTypes,
+			Value:       20,
+		},
+		{
+			BucketName:  "bucket1",
+			Region:      "ap-northeast-2",
+			MetricName:  MetricNameNumberOfObjects,
+			StorageType: StorageTypeAllStorageTypes,
+			Value:       0,
+		},
 	},
 }
 
 func TestNewRenderer(t *testing.T) {
 	type args struct {
-		metrics    []Metric
-		metricName MetricName
+		data       *MetricData
 		outputType OutputType
 	}
 	tests := []struct {
-		name string
-		args args
-		want *Renderer
+		name  string
+		args  args
+		want  *Renderer
+		wantW string
 	}{
 		{
 			name: "normal",
 			args: args{
-				metrics:    sampleSizeMetrics,
-				metricName: MetricNameBucketSizeBytes,
+				data:       testSizeMetricData,
 				outputType: OutputTypeJSON,
 			},
 			want: &Renderer{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeJSON,
 				w:          &bytes.Buffer{},
 			},
@@ -69,13 +75,11 @@ func TestNewRenderer(t *testing.T) {
 		{
 			name: "empty",
 			args: args{
-				metrics:    []Metric{},
-				metricName: MetricNameNumberOfObjects,
+				data:       nil,
 				outputType: OutputTypeText,
 			},
 			want: &Renderer{
-				Metrics:    []Metric{},
-				MetricName: MetricNameNumberOfObjects,
+				Data:       nil,
 				OutputType: OutputTypeText,
 				w:          &bytes.Buffer{},
 			},
@@ -84,15 +88,11 @@ func TestNewRenderer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
-			got := NewRenderer(w, tt.args.metrics, tt.args.metricName, tt.args.outputType)
-			if !reflect.DeepEqual(got.Metrics, tt.want.Metrics) {
-				t.Errorf("NewRenderer() Metrics = %v, want %v", got.Metrics, tt.want.Metrics)
+			if got := NewRenderer(w, tt.args.data, tt.args.outputType); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewRenderer() = %v, want %v", got, tt.want)
 			}
-			if got.MetricName != tt.want.MetricName {
-				t.Errorf("NewRenderer() MetricName = %v, want %v", got.MetricName, tt.want.MetricName)
-			}
-			if got.OutputType != tt.want.OutputType {
-				t.Errorf("NewRenderer() OutputType = %v, want %v", got.OutputType, tt.want.OutputType)
+			if gotW := w.String(); gotW != tt.wantW {
+				t.Errorf("NewRenderer() = %v, want %v", gotW, tt.wantW)
 			}
 		})
 	}
@@ -100,8 +100,7 @@ func TestNewRenderer(t *testing.T) {
 
 func TestRenderer_String(t *testing.T) {
 	type fields struct {
-		Metrics    []Metric
-		MetricName MetricName
+		Data       *MetricData
 		OutputType OutputType
 		w          io.Writer
 	}
@@ -113,43 +112,49 @@ func TestRenderer_String(t *testing.T) {
 		{
 			name: "normal",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeJSON,
 				w:          &bytes.Buffer{},
 			},
 			want: `{
-  "Metrics": [
-    {
-      "BucketName": "bucket0",
-      "Region": "ap-northeast-1",
-      "StorageType": "StandardStorage",
-      "Bytes": 1024,
-      "ReadableBytes": "1.0 KiB"
-    },
-    {
-      "BucketName": "bucket1",
-      "Region": "ap-northeast-2",
-      "StorageType": "GlacierStorage",
-      "Bytes": 4096,
-      "ReadableBytes": "4.0 KiB"
-    }
-  ],
-  "MetricName": "BucketSizeBytes",
+  "Data": {
+    "Header": [
+      "BucketName",
+      "Region",
+      "MetricName",
+      "StorageType",
+      "Value"
+    ],
+    "Metrics": [
+      {
+        "BucketName": "bucket0",
+        "Region": "ap-northeast-1",
+        "MetricName": "BucketSizeBytes",
+        "StorageType": "StandardStorage",
+        "Value": 1024
+      },
+      {
+        "BucketName": "bucket1",
+        "Region": "ap-northeast-2",
+        "MetricName": "BucketSizeBytes",
+        "StorageType": "GlacierStorage",
+        "Value": 4096
+      }
+    ],
+    "Total": 0
+  },
   "OutputType": "json"
 }`,
 		},
 		{
 			name: "empty",
 			fields: fields{
-				Metrics:    []Metric{},
-				MetricName: MetricNameNumberOfObjects,
+				Data:       nil,
 				OutputType: OutputTypeText,
 				w:          &bytes.Buffer{},
 			},
 			want: `{
-  "Metrics": [],
-  "MetricName": "NumberOfObjects",
+  "Data": null,
   "OutputType": "text"
 }`,
 		},
@@ -157,8 +162,7 @@ func TestRenderer_String(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ren := &Renderer{
-				Metrics:    tt.fields.Metrics,
-				MetricName: tt.fields.MetricName,
+				Data:       tt.fields.Data,
 				OutputType: tt.fields.OutputType,
 				w:          tt.fields.w,
 			}
@@ -171,8 +175,7 @@ func TestRenderer_String(t *testing.T) {
 
 func TestRenderer_Render(t *testing.T) {
 	type fields struct {
-		Metrics    []Metric
-		MetricName MetricName
+		Data       *MetricData
 		OutputType OutputType
 	}
 	tests := []struct {
@@ -184,24 +187,23 @@ func TestRenderer_Render(t *testing.T) {
 		{
 			name: "json",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeJSON,
 			},
 			want: `[
   {
     "BucketName": "bucket0",
     "Region": "ap-northeast-1",
+    "MetricName": "BucketSizeBytes",
     "StorageType": "StandardStorage",
-    "Bytes": 1024,
-    "ReadableBytes": "1.0 KiB"
+    "Value": 1024
   },
   {
     "BucketName": "bucket1",
     "Region": "ap-northeast-2",
+    "MetricName": "BucketSizeBytes",
     "StorageType": "GlacierStorage",
-    "Bytes": 4096,
-    "ReadableBytes": "4.0 KiB"
+    "Value": 4096
   }
 ]
 `,
@@ -210,87 +212,96 @@ func TestRenderer_Render(t *testing.T) {
 		{
 			name: "text for size metric",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeText,
 			},
-			want: `+------------+----------------+-----------------+-------+---------------+
-| BucketName | Region         | StorageType     | Bytes | ReadableBytes |
-+------------+----------------+-----------------+-------+---------------+
-| bucket0    | ap-northeast-1 | StandardStorage |  1024 | 1.0 KiB       |
-+------------+----------------+-----------------+-------+---------------+
-| bucket1    | ap-northeast-2 | GlacierStorage  |  4096 | 4.0 KiB       |
-+------------+----------------+-----------------+-------+---------------+
+			want: `+------------+----------------+-----------------+-----------------+-------+
+| BucketName | Region         | MetricName      | StorageType     | Value |
++------------+----------------+-----------------+-----------------+-------+
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage |  1024 |
++------------+----------------+-----------------+-----------------+-------+
+| bucket1    | ap-northeast-2 | BucketSizeBytes | GlacierStorage  |  4096 |
++------------+----------------+-----------------+-----------------+-------+
 `,
 			wantErr: false,
 		},
 		{
 			name: "text for object metric",
 			fields: fields{
-				Metrics:    sampleObjectMetrics,
-				MetricName: MetricNameNumberOfObjects,
+				Data:       testObjectMetricData,
 				OutputType: OutputTypeText,
 			},
-			want: `+------------+----------------+-----------------+---------+
-| BucketName | Region         | StorageType     | Objects |
-+------------+----------------+-----------------+---------+
-| bucket0    | ap-northeast-1 | AllStorageTypes |      20 |
-+------------+----------------+-----------------+---------+
-| bucket1    | ap-northeast-2 | AllStorageTypes |       0 |
-+------------+----------------+-----------------+---------+
+			want: `+------------+----------------+-----------------+-----------------+-------+
+| BucketName | Region         | MetricName      | StorageType     | Value |
++------------+----------------+-----------------+-----------------+-------+
+| bucket0    | ap-northeast-1 | NumberOfObjects | AllStorageTypes |    20 |
++------------+----------------+-----------------+-----------------+-------+
+| bucket1    | ap-northeast-2 | NumberOfObjects | AllStorageTypes |     0 |
++------------+----------------+-----------------+-----------------+-------+
+`,
+			wantErr: false,
+		},
+		{
+			name: "compressed text",
+			fields: fields{
+				Data:       testSizeMetricData,
+				OutputType: OutputTypeCompressedText,
+			},
+			want: `+------------+----------------+-----------------+-----------------+-------+
+| BucketName | Region         | MetricName      | StorageType     | Value |
++------------+----------------+-----------------+-----------------+-------+
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage |  1024 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | GlacierStorage  |  4096 |
++------------+----------------+-----------------+-----------------+-------+
 `,
 			wantErr: false,
 		},
 		{
 			name: "markdown",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeMarkdown,
 			},
-			want: `| BucketName | Region         | StorageType     | Bytes | ReadableBytes |
-|------------|----------------|-----------------|-------|---------------|
-| bucket0    | ap-northeast-1 | StandardStorage |  1024 | 1.0 KiB       |
-| bucket1    | ap-northeast-2 | GlacierStorage  |  4096 | 4.0 KiB       |
+			want: `| BucketName | Region         | MetricName      | StorageType     | Value |
+|------------|----------------|-----------------|-----------------|-------|
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage |  1024 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | GlacierStorage  |  4096 |
 `,
 			wantErr: false,
 		},
 		{
 			name: "backlog",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeBacklog,
 			},
-			want: `| BucketName | Region         | StorageType     | Bytes | ReadableBytes |h
-| bucket0    | ap-northeast-1 | StandardStorage |  1024 | 1.0 KiB       |
-| bucket1    | ap-northeast-2 | GlacierStorage  |  4096 | 4.0 KiB       |
+			want: `| BucketName | Region         | MetricName      | StorageType     | Value |h
+| bucket0    | ap-northeast-1 | BucketSizeBytes | StandardStorage |  1024 |
+| bucket1    | ap-northeast-2 | BucketSizeBytes | GlacierStorage  |  4096 |
 `,
 			wantErr: false,
 		},
 		{
 			name: "tsv for size metric",
 			fields: fields{
-				Metrics:    sampleSizeMetrics,
-				MetricName: MetricNameBucketSizeBytes,
+				Data:       testSizeMetricData,
 				OutputType: OutputTypeTSV,
 			},
-			want: `BucketName	Region	StorageType	Bytes	ReadableBytes
-bucket0	ap-northeast-1	StandardStorage	1024	1.0 KiB
-bucket1	ap-northeast-2	GlacierStorage	4096	4.0 KiB
+			want: `BucketName	Region	MetricName	StorageType	Value
+bucket0	ap-northeast-1	BucketSizeBytes	StandardStorage	1024
+bucket1	ap-northeast-2	BucketSizeBytes	GlacierStorage	4096
 `,
 			wantErr: false,
 		},
 		{
 			name: "tsv for object metric",
 			fields: fields{
-				Metrics:    sampleObjectMetrics,
-				MetricName: MetricNameNumberOfObjects,
+				Data:       testObjectMetricData,
 				OutputType: OutputTypeTSV,
 			},
-			want: `BucketName	Region	StorageType	Objects
-bucket0	ap-northeast-1	AllStorageTypes	20
-bucket1	ap-northeast-2	AllStorageTypes	0
+			want: `BucketName	Region	MetricName	StorageType	Value
+bucket0	ap-northeast-1	NumberOfObjects	AllStorageTypes	20
+bucket1	ap-northeast-2	NumberOfObjects	AllStorageTypes	0
 `,
 			wantErr: false,
 		},
@@ -299,16 +310,15 @@ bucket1	ap-northeast-2	AllStorageTypes	0
 		t.Run(tt.name, func(t *testing.T) {
 			w := &bytes.Buffer{}
 			ren := &Renderer{
-				Metrics:    tt.fields.Metrics,
-				MetricName: tt.fields.MetricName,
+				Data:       tt.fields.Data,
 				OutputType: tt.fields.OutputType,
 				w:          w,
 			}
 			if err := ren.Render(); (err != nil) != tt.wantErr {
 				t.Errorf("Renderer.Render() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if got := w.String(); got != tt.want {
-				t.Errorf("Renderer.Render() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.want, w.String()); diff != "" {
+				t.Errorf("Renderer.Render() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

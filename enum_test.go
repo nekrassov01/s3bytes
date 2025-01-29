@@ -6,99 +6,6 @@ import (
 	"testing"
 )
 
-func Test_shell_String(t *testing.T) {
-	tests := []struct {
-		name string
-		tr   shell
-		want string
-	}{
-		{
-			name: "bash",
-			tr:   bash,
-			want: "bash",
-		},
-		{
-			name: "zsh",
-			tr:   zsh,
-			want: "zsh",
-		},
-		{
-			name: "pwsh",
-			tr:   pwsh,
-			want: "pwsh",
-		},
-		{
-			name: "default",
-			tr:   3,
-			want: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.tr.String(); got != tt.want {
-				t.Errorf("shell.String() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_parseShell(t *testing.T) {
-	type args struct {
-		s string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    shell
-		wantErr bool
-	}{
-		{
-			name: "bash",
-			args: args{
-				s: "bash",
-			},
-			want:    bash,
-			wantErr: false,
-		},
-		{
-			name: "zsh",
-			args: args{
-				s: "zsh",
-			},
-			want:    zsh,
-			wantErr: false,
-		},
-		{
-			name: "pwsh",
-			args: args{
-				s: "pwsh",
-			},
-			want:    pwsh,
-			wantErr: false,
-		},
-		{
-			name: "unsupported",
-			args: args{
-				s: "unsupported",
-			},
-			want:    0,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseShell(tt.args.s)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseShell() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("parseShell() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestOutputType_String(t *testing.T) {
 	tests := []struct {
 		name string
@@ -129,6 +36,11 @@ func TestOutputType_String(t *testing.T) {
 			name: "tsv",
 			tr:   OutputTypeTSV,
 			want: "tsv",
+		},
+		{
+			name: "none",
+			tr:   OutputTypeNone,
+			want: "none",
 		},
 	}
 	for _, tt := range tests {
@@ -211,6 +123,14 @@ func TestParseOutputType(t *testing.T) {
 				s: "text",
 			},
 			want:    OutputTypeText,
+			wantErr: false,
+		},
+		{
+			name: "compressed",
+			args: args{
+				s: "compressed",
+			},
+			want:    OutputTypeCompressedText,
 			wantErr: false,
 		},
 		{
@@ -343,6 +263,14 @@ func TestParseMetricName(t *testing.T) {
 			},
 			want:    MetricNameNumberOfObjects,
 			wantErr: false,
+		},
+		{
+			name: "unsupported",
+			args: args{
+				s: "unsupported",
+			},
+			want:    MetricNameNone,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

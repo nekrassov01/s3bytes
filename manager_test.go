@@ -2,298 +2,197 @@ package s3bytes
 
 import (
 	"context"
-	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"golang.org/x/sync/semaphore"
 )
 
 func TestNewManager(t *testing.T) {
 	type args struct {
-		ctx         context.Context
-		client      *Client
-		region      string
-		prefix      string
-		expr        string
-		metricName  MetricName
-		storageType StorageType
+		ctx    context.Context
+		client *Client
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *Manager
-		wantErr bool
+		name string
+		args args
+		want *Manager
 	}{
 		{
 			name: "empty client",
 			args: args{
-				ctx:         context.Background(),
-				client:      NewMockClient(&MockS3{}, &MockCW{}),
-				metricName:  MetricNameBucketSizeBytes,
-				storageType: StorageTypeStandardStorage,
-				prefix:      "",
-				expr:        "< 100",
-				region:      "ap-northeast-1",
+				ctx:    context.Background(),
+				client: newMockClient(&mockS3{}, &mockCloudWatch{}),
 			},
 			want: &Manager{
-				Client:      NewMockClient(&MockS3{}, &MockCW{}),
-				Buckets:     []s3types.Bucket{},
-				Batches:     [][]cwtypes.MetricDataQuery{},
-				Metrics:     []Metric{},
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				MaxQueries:  maxQueries,
-				Prefix:      "",
-				Region:      "ap-northeast-1",
+				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				metricName:  MetricNameNone,
+				storageType: StorageTypeNone,
+				prefix:      nil,
+				regions:     DefaultRegions,
 				ctx:         context.Background(),
 			},
-			wantErr: false,
 		},
 		{
 			name: "nil client",
 			args: args{
-				ctx:         context.Background(),
-				client:      nil,
-				metricName:  MetricNameBucketSizeBytes,
-				storageType: StorageTypeStandardStorage,
-				prefix:      "",
-				expr:        "> 100",
-				region:      "ap-northeast-1",
+				ctx:    context.Background(),
+				client: nil,
 			},
 			want: &Manager{
 				Client:      nil,
-				Buckets:     []s3types.Bucket{},
-				Batches:     [][]cwtypes.MetricDataQuery{},
-				Metrics:     []Metric{},
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				MaxQueries:  maxQueries,
-				Prefix:      "",
-				Region:      "ap-northeast-1",
+				metricName:  MetricNameNone,
+				storageType: StorageTypeNone,
+				prefix:      nil,
+				regions:     DefaultRegions,
 				ctx:         context.Background(),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewManager(tt.args.ctx, tt.args.client)
+			opts := cmpopts.IgnoreUnexported(*got)
+			if diff := cmp.Diff(got, tt.want, opts); diff != "" {
+				t.Errorf("NewManager() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestManager_SetRegions(t *testing.T) {
+	type fields struct {
+		Client      *Client
+		MetricName  MetricName
+		StorageType StorageType
+		Prefix      *string
+		Regions     []string
+		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
+		ctx         context.Context
+	}
+	type args struct {
+		regions []string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "empty",
+			args: args{
+				regions: nil,
 			},
 			wantErr: false,
 		},
 		{
-			name: "invalid expr",
+			name: "valid",
 			args: args{
-				ctx:         context.Background(),
-				client:      nil,
-				metricName:  MetricNameBucketSizeBytes,
-				storageType: StorageTypeStandardStorage,
-				prefix:      "",
-				expr:        "abcd",
-				region:      "ap-northeast-1",
+				regions: []string{"ap-northeast-1", "ap-northeast-2"},
 			},
-			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "invalid",
+			args: args{
+				regions: []string{"ap-northeast-1", "invalid"},
+			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewManager(tt.args.ctx, tt.args.client, tt.args.region, tt.args.prefix, tt.args.expr, tt.args.metricName, tt.args.storageType)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewManager() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			man := &Manager{
+				Client:      tt.fields.Client,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
+				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
+				ctx:         tt.fields.ctx,
 			}
-			if err == nil {
-				if !reflect.DeepEqual(got.Client, tt.want.Client) {
-					t.Errorf("NewManager() Client = %v, want %v", got.Client, tt.want.Client)
-				}
-				if len(got.Buckets) != len(tt.want.Buckets) {
-					t.Errorf("NewManager() Buckets length = %d, want %d", len(got.Buckets), len(tt.want.Buckets))
-				}
-				if len(got.Batches) != len(tt.want.Batches) {
-					t.Errorf("NewManager() Batches length = %d, want %d", len(got.Batches), len(tt.want.Batches))
-				}
-				if len(got.Metrics) != len(tt.want.Metrics) {
-					t.Errorf("NewManager() Metrics length = %d, want %d", len(got.Metrics), len(tt.want.Metrics))
-				}
-				if got.MetricName != tt.want.MetricName {
-					t.Errorf("NewManager() MetricName = %v, want %v", got.MetricName, tt.want.MetricName)
-				}
-				if got.StorageType != tt.want.StorageType {
-					t.Errorf("NewManager() StorageType = %v, want %v", got.StorageType, tt.want.StorageType)
-				}
-				if got.MaxQueries != tt.want.MaxQueries {
-					t.Errorf("NewManager() MaxQueries = %d, want %d", got.MaxQueries, tt.want.MaxQueries)
-				}
-				if got.Prefix != tt.want.Prefix {
-					t.Errorf("NewManager() Prefix = %v, want %v", got.Prefix, tt.want.Prefix)
-				}
-				if got.Region != tt.want.Region {
-					t.Errorf("NewManager() Prefix = %v, want %v", got.Region, tt.want.Region)
-				}
-				if got.ctx != tt.want.ctx {
-					t.Errorf("NewManager() ctx = %v, want %v", got.ctx, tt.want.ctx)
-				}
+			if err := man.SetRegion(tt.args.regions); (err != nil) != tt.wantErr {
+				t.Errorf("Manager.SetRegion() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestManager_String(t *testing.T) {
+func TestManager_SetPrefix(t *testing.T) {
 	type fields struct {
 		Client      *Client
-		Buckets     []s3types.Bucket
-		Batches     [][]cwtypes.MetricDataQuery
-		Metrics     []Metric
 		MetricName  MetricName
 		StorageType StorageType
-		MaxQueries  int
-		Prefix      string
-		Region      string
+		Prefix      *string
+		Regions     []string
 		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
 		ctx         context.Context
 	}
+	type args struct {
+		prefix string
+	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   string
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
 	}{
 		{
-			name: "normal",
-			fields: fields{
-				Client:      NewMockClient(&MockS3{}, &MockCW{}),
-				Buckets:     []s3types.Bucket{{Name: aws.String("bucket0")}},
-				Batches:     [][]cwtypes.MetricDataQuery{{}},
-				Metrics:     []Metric{},
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				MaxQueries:  maxQueries,
-				Prefix:      "",
-				Region:      "ap-northeast-1",
-				ctx:         context.Background(),
+			name: "empty",
+			args: args{
+				prefix: "",
 			},
-			want: `{
-  "Buckets": [
-    {
-      "BucketRegion": null,
-      "CreationDate": null,
-      "Name": "bucket0"
-    }
-  ],
-  "Batches": [
-    []
-  ],
-  "Metrics": [],
-  "MetricName": "BucketSizeBytes",
-  "StorageType": "StandardStorage",
-  "MaxQueries": ` + strconv.Itoa(maxQueries) + `,
-  "Prefix": "",
-  "Region": "ap-northeast-1"
-}`,
+			wantErr: false,
 		},
 		{
-			name:   "empty",
-			fields: fields{},
-			want: `{
-  "Buckets": null,
-  "Batches": null,
-  "Metrics": null,
-  "MetricName": "BucketSizeBytes",
-  "StorageType": "StandardStorage",
-  "MaxQueries": 0,
-  "Prefix": "",
-  "Region": ""
-}`,
+			name: "valid",
+			args: args{
+				prefix: "test",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid",
+			args: args{
+				prefix: "test/",
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				Client:      tt.fields.Client,
-				Buckets:     tt.fields.Buckets,
-				Batches:     tt.fields.Batches,
-				Metrics:     tt.fields.Metrics,
-				MetricName:  tt.fields.MetricName,
-				StorageType: tt.fields.StorageType,
-				MaxQueries:  tt.fields.MaxQueries,
-				Prefix:      tt.fields.Prefix,
-				Region:      tt.fields.Region,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
 				ctx:         tt.fields.ctx,
 			}
-			if got := man.String(); got != tt.want {
-				t.Errorf("Manager.String() = %v, want %v", got, tt.want)
+			if err := man.SetPrefix(tt.args.prefix); (err != nil) != tt.wantErr {
+				t.Errorf("Manager.SetPrefix() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestManager_Debug(t *testing.T) {
+func TestManager_SetFilter(t *testing.T) {
 	type fields struct {
 		Client      *Client
-		Buckets     []s3types.Bucket
-		Batches     [][]cwtypes.MetricDataQuery
-		Metrics     []Metric
 		MetricName  MetricName
 		StorageType StorageType
-		MaxQueries  int
-		Prefix      string
-		Region      string
+		Prefix      *string
+		Regions     []string
 		filterFunc  func(float64) bool
-		ctx         context.Context
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		{
-			name: "normal",
-			fields: fields{
-				Client:      NewMockClient(&MockS3{}, &MockCW{}),
-				Buckets:     []s3types.Bucket{{Name: aws.String("bucket1")}},
-				Batches:     [][]cwtypes.MetricDataQuery{{}},
-				Metrics:     []Metric{},
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				MaxQueries:  maxQueries,
-				Prefix:      "",
-				Region:      "ap-northeast-1",
-				ctx:         context.Background(),
-			},
-		},
-		{
-			name:   "empty",
-			fields: fields{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(_ *testing.T) {
-			man := &Manager{
-				Client:      tt.fields.Client,
-				Buckets:     tt.fields.Buckets,
-				Batches:     tt.fields.Batches,
-				Metrics:     tt.fields.Metrics,
-				MetricName:  tt.fields.MetricName,
-				StorageType: tt.fields.StorageType,
-				MaxQueries:  tt.fields.MaxQueries,
-				Prefix:      tt.fields.Prefix,
-				Region:      tt.fields.Region,
-				filterFunc:  tt.fields.filterFunc,
-				ctx:         tt.fields.ctx,
-			}
-			man.Debug()
-		})
-	}
-}
-
-func TestManager_eval(t *testing.T) {
-	type fields struct {
-		Client      *Client
-		Buckets     []s3types.Bucket
-		Batches     [][]cwtypes.MetricDataQuery
-		Metrics     []Metric
-		MetricName  MetricName
-		StorageType StorageType
-		MaxQueries  int
-		Prefix      string
-		Region      string
-		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
 		ctx         context.Context
 	}
 	type args struct {
@@ -461,27 +360,159 @@ func TestManager_eval(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				Client:      tt.fields.Client,
-				Buckets:     tt.fields.Buckets,
-				Batches:     tt.fields.Batches,
-				Metrics:     tt.fields.Metrics,
-				MetricName:  tt.fields.MetricName,
-				StorageType: tt.fields.StorageType,
-				MaxQueries:  tt.fields.MaxQueries,
-				Prefix:      tt.fields.Prefix,
-				Region:      tt.fields.Region,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
 				ctx:         tt.fields.ctx,
 			}
-			got, err := man.eval(tt.args.expr)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Manager.eval() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err := man.SetFilter(tt.args.expr); (err != nil) != tt.wantErr {
+				t.Errorf("Manager.SetFilter() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			for _, tc := range tt.cases {
-				result := got(tc.v)
-				if result != tc.want {
-					t.Errorf("Manager.eval(): v = %v, got = %v, result = %v", tc.v, tc.want, result)
-				}
+		})
+	}
+}
+
+func TestManager_SetMetric(t *testing.T) {
+	type fields struct {
+		Client      *Client
+		MetricName  MetricName
+		StorageType StorageType
+		Prefix      *string
+		Regions     []string
+		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
+		ctx         context.Context
+	}
+	type args struct {
+		metricName  MetricName
+		storageType StorageType
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "normal",
+			args: args{
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid combination",
+			args: args{
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeAllStorageTypes,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid combination",
+			args: args{
+				metricName:  MetricNameNumberOfObjects,
+				storageType: StorageTypeStandardStorage,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			man := &Manager{
+				Client:      tt.fields.Client,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
+				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
+				ctx:         tt.fields.ctx,
+			}
+			if err := man.SetMetric(tt.args.metricName, tt.args.storageType); (err != nil) != tt.wantErr {
+				t.Errorf("Manager.SetMetric() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestManager_String(t *testing.T) {
+	type fields struct {
+		Client      *Client
+		MetricName  MetricName
+		StorageType StorageType
+		Prefix      *string
+		Regions     []string
+		filterFunc  func(float64) bool
+		sem         *semaphore.Weighted
+		ctx         context.Context
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "normal",
+			fields: fields{
+				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				MetricName:  MetricNameBucketSizeBytes,
+				StorageType: StorageTypeStandardStorage,
+				Prefix:      nil,
+				ctx:         context.Background(),
+			},
+			want: `{
+  "metricName": "BucketSizeBytes",
+  "storageType": "StandardStorage",
+  "prefix": null,
+  "regions": null
+}`,
+		},
+		{
+			name: "prefixed",
+			fields: fields{
+				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				MetricName:  MetricNameBucketSizeBytes,
+				StorageType: StorageTypeStandardStorage,
+				Prefix:      aws.String("test"),
+				ctx:         context.Background(),
+			},
+			want: `{
+  "metricName": "BucketSizeBytes",
+  "storageType": "StandardStorage",
+  "prefix": "test",
+  "regions": null
+}`,
+		},
+		{
+			name:   "empty",
+			fields: fields{},
+			want: `{
+  "metricName": "none",
+  "storageType": "none",
+  "prefix": null,
+  "regions": null
+}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			man := &Manager{
+				Client:      tt.fields.Client,
+				metricName:  tt.fields.MetricName,
+				storageType: tt.fields.StorageType,
+				prefix:      tt.fields.Prefix,
+				regions:     tt.fields.Regions,
+				filterFunc:  tt.fields.filterFunc,
+				sem:         tt.fields.sem,
+				ctx:         tt.fields.ctx,
+			}
+			if diff := cmp.Diff(man.String(), tt.want); diff != "" {
+				t.Errorf("Manager.String() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

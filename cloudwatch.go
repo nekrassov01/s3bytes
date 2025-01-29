@@ -1,45 +1,40 @@
 package s3bytes
 
 import (
-	"errors"
 	"fmt"
 	"slices"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/dustin/go-humanize"
+	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// SetQueries sets the metric data queries for the cloudwatch client.
-// https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html
-func (man *Manager) SetQueries() error {
-	if man.MetricName == MetricNameBucketSizeBytes && man.StorageType == StorageTypeAllStorageTypes {
-		return errors.New("BucketSizeBytes metric does not support AllStorageTypes")
-	}
-	if man.MetricName == MetricNameNumberOfObjects && man.StorageType != StorageTypeAllStorageTypes {
-		return errors.New("NumberOfObjects metric only supports AllStorageTypes")
-	}
+// buildQueries builds the metric data queries.
+// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html
+func (man *Manager) buildQueries(buckets []s3types.Bucket) [][]cwtypes.MetricDataQuery {
 	var (
-		batch          = make([]types.MetricDataQuery, 0, man.MaxQueries)
+		batches        = make([][]cwtypes.MetricDataQuery, 0, 2)
+		batch          = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
 		namespace      = aws.String("AWS/S3")
-		metricName     = aws.String(man.MetricName.String())
+		metricName     = aws.String(man.metricName.String())
 		bucketNameKey  = aws.String("BucketName")
 		storageTypeKey = aws.String("StorageType")
-		storageType    = aws.String(man.StorageType.String())
+		storageType    = aws.String(man.storageType.String())
 		period         = aws.Int32(86400)
 		stat           = aws.String("Average")
 	)
-	for i, bucket := range man.Buckets {
-		query := types.MetricDataQuery{
+	for i, bucket := range buckets {
+		query := cwtypes.MetricDataQuery{
 			Id:    aws.String(fmt.Sprintf("m%d", i)),
 			Label: bucket.Name,
-			MetricStat: &types.MetricStat{
-				Metric: &types.Metric{
+			MetricStat: &cwtypes.MetricStat{
+				Metric: &cwtypes.Metric{
 					Namespace:  namespace,
 					MetricName: metricName,
-					Dimensions: []types.Dimension{
+					Dimensions: []cwtypes.Dimension{
 						{
 							Name:  bucketNameKey,
 							Value: bucket.Name,
@@ -55,25 +50,27 @@ func (man *Manager) SetQueries() error {
 			},
 		}
 		batch = append(batch, query)
-		if len(batch) == man.MaxQueries {
-			man.Batches = append(man.Batches, batch)
-			batch = make([]types.MetricDataQuery, 0, man.MaxQueries)
+		if len(batch) == MaxQueries {
+			batches = append(batches, batch)
+			batch = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
 		}
 	}
 	if len(batch) > 0 {
-		man.Batches = append(man.Batches, batch)
+		batches = append(batches, batch)
 	}
-	return nil
+	return batches
 }
 
-// SetData sets the metric data for the cloudwatch client.
-func (man *Manager) SetData() error {
+// getMetrics gets the metrics and the total bytes.
+func (man *Manager) getMetrics(batches [][]cwtypes.MetricDataQuery, region string) ([]*Metric, int64, error) {
 	var (
+		total     int64
+		metrics   = make([]*Metric, 0, MaxQueries*2)
 		startTime = aws.Time(time.Now().Add(-48 * time.Hour))
 		endTime   = aws.Time(time.Now())
-		opt       = func(o *cloudwatch.Options) { o.Region = man.Region }
+		opt       = func(o *cloudwatch.Options) { o.Region = region }
 	)
-	for _, batch := range man.Batches {
+	for _, batch := range batches {
 		batch := batch
 		var token *string
 		for {
@@ -83,42 +80,29 @@ func (man *Manager) SetData() error {
 				MetricDataQueries: batch,
 				NextToken:         token,
 			}
-			out, err := man.cw.GetMetricData(man.ctx, in, opt)
+			out, err := man.GetMetricData(man.ctx, in, opt)
 			if err != nil {
-				return err
+				return nil, 0, err
 			}
 			for _, result := range out.MetricDataResults {
-				var (
-					metric Metric
-					size   float64
-				)
+				var value float64
 				if len(result.Values) == 0 {
-					size = 0
+					value = 0
 				} else {
-					size = slices.Max(result.Values)
+					value = slices.Max(result.Values)
 				}
-				if ok := man.filterFunc(size); !ok {
+				if ok := man.filterFunc(value); !ok {
 					continue
 				}
-				switch man.MetricName {
-				case MetricNameBucketSizeBytes:
-					metric = &SizeMetric{
-						BucketName:    aws.ToString(result.Label),
-						Region:        man.Region,
-						StorageType:   man.StorageType,
-						Bytes:         size,
-						ReadableBytes: humanize.IBytes(uint64(size)),
-					}
-				case MetricNameNumberOfObjects:
-					metric = &ObjectMetric{
-						BucketName:  aws.ToString(result.Label),
-						Region:      man.Region,
-						StorageType: man.StorageType,
-						Objects:     size,
-					}
-				default:
+				metric := &Metric{
+					BucketName:  aws.ToString(result.Label),
+					Region:      region,
+					MetricName:  man.metricName,
+					StorageType: man.storageType,
+					Value:       value,
 				}
-				man.Metrics = append(man.Metrics, metric)
+				metrics = append(metrics, metric)
+				atomic.AddInt64(&total, int64(metric.Value))
 			}
 			token = out.NextToken
 			if token == nil {
@@ -126,5 +110,5 @@ func (man *Manager) SetData() error {
 			}
 		}
 	}
-	return nil
+	return metrics, total, nil
 }

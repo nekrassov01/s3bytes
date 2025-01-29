@@ -1,81 +1,34 @@
 package s3bytes
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 )
-
-//go:embed completions/s3bytes.bash
-var completionBash string
-
-//go:embed completions/s3bytes.zsh
-var completionZsh string
-
-//go:embed completions/s3bytes.ps1
-var completionPwsh string
-
-type shell int
-
-const (
-	bash shell = iota
-	zsh
-	pwsh
-)
-
-func (t shell) String() string {
-	switch t {
-	case bash:
-		return "bash"
-	case zsh:
-		return "zsh"
-	case pwsh:
-		return "pwsh"
-	default:
-		return ""
-	}
-}
-
-func parseShell(s string) (shell, error) {
-	switch s {
-	case "bash":
-		return bash, nil
-	case "zsh":
-		return zsh, nil
-	case "pwsh":
-		return pwsh, nil
-	default:
-		return 0, fmt.Errorf("unsupported shell: %q", s)
-	}
-}
 
 // OutputType represents the output type of the renderer.
 type OutputType int
 
 const (
-	// OutputTypeJSON represents the JSON output type.
-	OutputTypeJSON OutputType = iota
-
-	// OutputTypeText represents the text output type.
-	OutputTypeText
-
-	// OutputTypeMarkdown represents the markdown output type.
-	OutputTypeMarkdown
-
-	// OutputTypeBacklog represents the backlog output type.
-	OutputTypeBacklog
-
-	// OutputTypeTSV represents the TSV output type.
-	OutputTypeTSV
+	OutputTypeNone           OutputType = iota // The output type that means none.
+	OutputTypeJSON                             // The output type that means JSON format.
+	OutputTypeText                             // The output type that means text format.
+	OutputTypeCompressedText                   // The output type that means compressed text format.
+	OutputTypeMarkdown                         // The output type that means markdown format.
+	OutputTypeBacklog                          // The output type that means backlog format.
+	OutputTypeTSV                              // The output type that means TSV format.
 )
 
 // String returns the string representation of the output type.
 func (t OutputType) String() string {
 	switch t {
+	case OutputTypeNone:
+		return "none"
 	case OutputTypeJSON:
 		return "json"
 	case OutputTypeText:
 		return "text"
+	case OutputTypeCompressedText:
+		return "compressed"
 	case OutputTypeMarkdown:
 		return "markdown"
 	case OutputTypeBacklog:
@@ -99,6 +52,8 @@ func ParseOutputType(s string) (OutputType, error) {
 		return OutputTypeJSON, nil
 	case OutputTypeText.String():
 		return OutputTypeText, nil
+	case OutputTypeCompressedText.String():
+		return OutputTypeCompressedText, nil
 	case OutputTypeMarkdown.String():
 		return OutputTypeMarkdown, nil
 	case OutputTypeBacklog.String():
@@ -106,7 +61,7 @@ func ParseOutputType(s string) (OutputType, error) {
 	case OutputTypeTSV.String():
 		return OutputTypeTSV, nil
 	default:
-		return 0, fmt.Errorf("unsupported output type: %q", s)
+		return OutputTypeNone, fmt.Errorf("unsupported output type: %q", s)
 	}
 }
 
@@ -114,16 +69,16 @@ func ParseOutputType(s string) (OutputType, error) {
 type MetricName int
 
 const (
-	// MetricNameBucketSizeBytes represents the bucket size in bytes.
-	MetricNameBucketSizeBytes MetricName = iota
-
-	// MetricNameNumberOfObjects represents the number of objects in the bucket.
-	MetricNameNumberOfObjects
+	MetricNameNone            MetricName = iota // Metric name that means none.
+	MetricNameBucketSizeBytes                   // Metric name that means bucket size in bytes.
+	MetricNameNumberOfObjects                   // Metric name that means number of objects.
 )
 
 // String returns the string representation of the metric name.
 func (t MetricName) String() string {
 	switch t {
+	case MetricNameNone:
+		return "none"
 	case MetricNameBucketSizeBytes:
 		return "BucketSizeBytes"
 	case MetricNameNumberOfObjects:
@@ -146,18 +101,20 @@ func ParseMetricName(s string) (MetricName, error) {
 	case MetricNameNumberOfObjects.String():
 		return MetricNameNumberOfObjects, nil
 	default:
-		return 0, fmt.Errorf("unsupported metrics name: %q", s)
+		return MetricNameNone, fmt.Errorf("unsupported metrics name: %q", s)
 	}
 }
 
 // StorageType represents the storage type.
-// https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html#s3-cloudwatch-metrics
+// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html#s3-cloudwatch-metrics
 type StorageType int
 
 const (
+	StorageTypeNone StorageType = iota
+
 	// S3 Standard:
 
-	StorageTypeStandardStorage StorageType = iota
+	StorageTypeStandardStorage
 
 	// S3 Intelligent-Tiering:
 
@@ -213,6 +170,9 @@ const (
 // String returns the string representation of the storage type.
 func (t StorageType) String() string {
 	switch t {
+	case StorageTypeNone:
+		return "none"
+
 	// S3 Standard:
 	case StorageTypeStandardStorage:
 		return "StandardStorage"
@@ -363,6 +323,6 @@ func ParseStorageType(s string) (StorageType, error) {
 		return StorageTypeAllStorageTypes, nil
 
 	default:
-		return 0, fmt.Errorf("unsupported storage type: %q", s)
+		return StorageTypeNone, fmt.Errorf("unsupported storage type: %q", s)
 	}
 }
