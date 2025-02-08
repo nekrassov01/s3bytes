@@ -62,7 +62,7 @@ func newApp(w, ew io.Writer) *app {
 		Aliases:     []string{"r"},
 		Usage:       "set target regions",
 		Value:       cli.NewStringSlice(s3bytes.DefaultRegions...),
-		DefaultText: "all regions with no opt-in required",
+		DefaultText: "all regions with no opt-in",
 	}
 	a.metricName = &cli.StringFlag{
 		Name:    "metric-name",
