@@ -190,6 +190,16 @@ func TestRenderer_Render(t *testing.T) {
 				Data:       testSizeMetricData,
 				OutputType: OutputTypeJSON,
 			},
+			want: `[{"BucketName":"bucket0","Region":"ap-northeast-1","MetricName":"BucketSizeBytes","StorageType":"StandardStorage","Value":1024},{"BucketName":"bucket1","Region":"ap-northeast-2","MetricName":"BucketSizeBytes","StorageType":"GlacierStorage","Value":4096}]
+`,
+			wantErr: false,
+		},
+		{
+			name: "prettyjson",
+			fields: fields{
+				Data:       testSizeMetricData,
+				OutputType: OutputTypePrettyJSON,
+			},
 			want: `[
   {
     "BucketName": "bucket0",
