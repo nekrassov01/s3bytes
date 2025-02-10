@@ -1,6 +1,7 @@
 package s3bytes
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -87,17 +88,29 @@ func render(pie *charts.Pie) error {
 	if pie == nil {
 		return nil
 	}
-	name := "chart.html"
+	title := "s3bytes"
 	page := components.NewPage()
-	page.SetPageTitle("s3ytes")
+	page.SetPageTitle(title)
 	page.AddCharts(pie)
-	f, err := os.Create(name)
+	fname := title + ".html"
+	i := 1
+	for {
+		if _, err := os.Stat(fname); err != nil {
+			if os.IsNotExist(err) {
+				break
+			}
+			return err
+		}
+		fname = fmt.Sprintf("%s%d.html", title, i)
+		i++
+	}
+	f, err := os.Create(fname)
 	if err != nil {
 		return err
 	}
 	if err := page.Render(io.MultiWriter(f)); err != nil {
 		return err
 	}
-	browser.OpenFile(name) //nolint:errcheck
+	browser.OpenFile(fname) //nolint:errcheck
 	return nil
 }
