@@ -28,7 +28,7 @@ type app struct {
 	completion  *cli.StringFlag
 	profile     *cli.StringFlag
 	loglevel    *cli.StringFlag
-	regions     *cli.StringSliceFlag
+	region      *cli.StringSliceFlag
 	metricName  *cli.StringFlag
 	storageType *cli.StringFlag
 	prefix      *cli.StringFlag
@@ -57,8 +57,8 @@ func newApp(w, ew io.Writer) *app {
 		EnvVars: []string{label + "_LOG_LEVEL"},
 		Value:   log.InfoLevel.String(),
 	}
-	a.regions = &cli.StringSliceFlag{
-		Name:        "regions",
+	a.region = &cli.StringSliceFlag{
+		Name:        "region",
 		Aliases:     []string{"r"},
 		Usage:       "set target regions",
 		Value:       cli.NewStringSlice(s3bytes.DefaultRegions...),
@@ -104,7 +104,7 @@ func newApp(w, ew io.Writer) *app {
 		ErrWriter:            ew,
 		Before:               a.before,
 		Action:               a.action,
-		Flags:                []cli.Flag{a.completion, a.profile, a.loglevel, a.regions, a.prefix, a.expression, a.metricName, a.storageType, a.output},
+		Flags:                []cli.Flag{a.completion, a.profile, a.loglevel, a.region, a.prefix, a.expression, a.metricName, a.storageType, a.output},
 		Metadata:             map[string]any{},
 	}
 	return &a
@@ -179,7 +179,7 @@ func (a *app) action(c *cli.Context) error {
 	man := s3bytes.NewManager(c.Context, client)
 
 	// set regions to the manager
-	if err := man.SetRegion(c.StringSlice(a.regions.Name)); err != nil {
+	if err := man.SetRegion(c.StringSlice(a.region.Name)); err != nil {
 		return err
 	}
 
