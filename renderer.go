@@ -40,6 +40,8 @@ func (ren *Renderer) Render() error {
 		return ren.toTable()
 	case OutputTypeTSV:
 		return ren.toTSV()
+	case OutputTypeChart:
+		return ren.toChart()
 	default:
 		return nil
 	}
@@ -86,6 +88,12 @@ func (ren *Renderer) toTSV() error {
 	}
 	w.Flush()
 	return w.Error()
+}
+
+func (ren *Renderer) toChart() error {
+	title, items := getPieItems(ren.Data)
+	pie := newPie(title, items)
+	return render(pie)
 }
 
 func (ren *Renderer) toInput() mintab.Input {

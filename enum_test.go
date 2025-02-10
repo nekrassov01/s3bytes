@@ -48,6 +48,11 @@ func TestOutputType_String(t *testing.T) {
 			want: "tsv",
 		},
 		{
+			name: "chart",
+			tr:   OutputTypeChart,
+			want: "chart",
+		},
+		{
 			name: "none",
 			tr:   OutputTypeNone,
 			want: "none",
@@ -103,6 +108,11 @@ func TestOutputType_MarshalJSON(t *testing.T) {
 			name: "tsv",
 			tr:   OutputTypeTSV,
 			want: []byte(`"tsv"`),
+		},
+		{
+			name: "chart",
+			tr:   OutputTypeChart,
+			want: []byte(`"chart"`),
 		},
 	}
 	for _, tt := range tests {
@@ -183,6 +193,14 @@ func TestParseOutputType(t *testing.T) {
 				s: "tsv",
 			},
 			want:    OutputTypeTSV,
+			wantErr: false,
+		},
+		{
+			name: "chart",
+			args: args{
+				s: "chart",
+			},
+			want:    OutputTypeChart,
 			wantErr: false,
 		},
 		{

@@ -7,11 +7,14 @@ import (
 
 // TestMain is the entry point of the test.
 func TestMain(m *testing.M) {
-	original := MaxQueries
+	originalMaxQueries := MaxQueries
 	MaxQueries = 2
+	originalMaxChartItems := MaxChartItems
+	MaxChartItems = 3
 	code := m.Run()
 	defer func() {
-		MaxQueries = original
+		MaxQueries = originalMaxQueries
+		MaxChartItems = originalMaxChartItems
 		os.Exit(code)
 	}()
 }
