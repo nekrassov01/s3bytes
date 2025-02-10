@@ -40,6 +40,8 @@ func (ren *Renderer) Render() error {
 		return ren.toTable()
 	case OutputTypeTSV:
 		return ren.toTSV()
+	case OutputTypeChart:
+		return ren.toChart()
 	default:
 		return nil
 	}
@@ -73,6 +75,17 @@ func (ren *Renderer) toTable() error {
 	return nil
 }
 
+func (ren *Renderer) toInput() mintab.Input {
+	data := make([][]any, len(ren.Data.Metrics))
+	for i, row := range ren.Data.Metrics {
+		data[i] = row.toInput()
+	}
+	return mintab.Input{
+		Header: ren.Data.Header,
+		Data:   data,
+	}
+}
+
 func (ren *Renderer) toTSV() error {
 	w := csv.NewWriter(ren.w)
 	w.Comma = '\t'
@@ -88,13 +101,8 @@ func (ren *Renderer) toTSV() error {
 	return w.Error()
 }
 
-func (ren *Renderer) toInput() mintab.Input {
-	data := make([][]any, len(ren.Data.Metrics))
-	for i, row := range ren.Data.Metrics {
-		data[i] = row.toInput()
-	}
-	return mintab.Input{
-		Header: ren.Data.Header,
-		Data:   data,
-	}
+func (ren *Renderer) toChart() error {
+	title, items := getPieItems(ren.Data)
+	pie := newPie(title, items)
+	return render(pie)
 }
