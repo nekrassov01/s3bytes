@@ -49,6 +49,7 @@ func (man *Manager) List() (*MetricData, error) {
 			select {
 			case metricsChan <- m:
 			case <-ctx.Done():
+				return
 			}
 		}()
 	}
