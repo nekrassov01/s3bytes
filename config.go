@@ -17,6 +17,9 @@ var (
 	// See: https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDataQuery.html
 	MaxQueries = 500
 
+	// MaxChartItems is the maximum number of items in a chart.
+	MaxChartItems = 11
+
 	// DefaultRegion is the region speficied by default.
 	DefaultRegion = "us-east-1"
 

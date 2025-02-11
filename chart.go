@@ -11,9 +11,6 @@ import (
 	"github.com/pkg/browser"
 )
 
-// MaxChartItems is the maximum number of items in a chart
-var MaxChartItems = 11
-
 func getPieItems(data *MetricData) (string, []opts.PieData) {
 	var (
 		othersTotal = 0.0
