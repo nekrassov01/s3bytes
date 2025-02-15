@@ -32,7 +32,7 @@ type app struct {
 	metricName  *cli.StringFlag
 	storageType *cli.StringFlag
 	prefix      *cli.StringFlag
-	expression  *cli.StringFlag
+	filter      *cli.StringFlag
 	output      *cli.StringFlag
 }
 
@@ -81,9 +81,9 @@ func newApp(w, ew io.Writer) *app {
 		Aliases: []string{"P"},
 		Usage:   "set bucket name prefix",
 	}
-	a.expression = &cli.StringFlag{
-		Name:    "expression",
-		Aliases: []string{"e"},
+	a.filter = &cli.StringFlag{
+		Name:    "filter",
+		Aliases: []string{"f"},
 		Usage:   "set filter expression for metric values",
 	}
 	a.output = &cli.StringFlag{
@@ -104,7 +104,7 @@ func newApp(w, ew io.Writer) *app {
 		ErrWriter:            ew,
 		Before:               a.before,
 		Action:               a.action,
-		Flags:                []cli.Flag{a.completion, a.profile, a.loglevel, a.region, a.prefix, a.expression, a.metricName, a.storageType, a.output},
+		Flags:                []cli.Flag{a.completion, a.profile, a.loglevel, a.region, a.prefix, a.filter, a.metricName, a.storageType, a.output},
 		Metadata:             map[string]any{},
 	}
 	return &a
@@ -194,7 +194,7 @@ func (a *app) action(c *cli.Context) error {
 	}
 
 	// set filter to the manager
-	if err := man.SetFilter(c.String(a.expression.Name)); err != nil {
+	if err := man.SetFilter(c.String(a.filter.Name)); err != nil {
 		return err
 	}
 
@@ -217,7 +217,7 @@ func (a *app) action(c *cli.Context) error {
 	// logging at process stop with total bytes
 	logger.Info(
 		"stopped",
-		"totalBytes", humanize.Comma(data.Total),
+		"total", humanize.Comma(data.Total),
 	)
 
 	return nil
