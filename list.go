@@ -40,7 +40,7 @@ func (man *Manager) List() (*MetricData, error) {
 				errorFunc(err)
 				return
 			}
-			m, n, err := man.getMetrics(man.buildQueries(buckets), region)
+			m, n, err := man.getMetrics(buckets, region)
 			if err != nil {
 				errorFunc(err)
 				return

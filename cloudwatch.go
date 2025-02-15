@@ -12,19 +12,23 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-// buildQueries builds the metric data queries.
-// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/metrics-dimensions.html
-func (man *Manager) buildQueries(buckets []s3types.Bucket) [][]cwtypes.MetricDataQuery {
+var (
+	namespace      = aws.String("AWS/S3")
+	bucketNameKey  = aws.String("BucketName")
+	storageTypeKey = aws.String("StorageType")
+	period         = aws.Int32(86400)
+	stat           = aws.String("Average")
+	startTime      = aws.Time(time.Now().Add(-48 * time.Hour))
+	endTime        = aws.Time(time.Now())
+)
+
+func (man *Manager) getMetrics(buckets []s3types.Bucket, region string) ([]*Metric, int64, error) {
 	var (
-		batches        = make([][]cwtypes.MetricDataQuery, 0, 2)
-		batch          = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
-		namespace      = aws.String("AWS/S3")
-		metricName     = aws.String(man.metricName.String())
-		bucketNameKey  = aws.String("BucketName")
-		storageTypeKey = aws.String("StorageType")
-		storageType    = aws.String(man.storageType.String())
-		period         = aws.Int32(86400)
-		stat           = aws.String("Average")
+		total       int64
+		metricName  = aws.String(man.metricName.String())
+		storageType = aws.String(man.storageType.String())
+		queries     = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
+		metrics     = make([]*Metric, 0, MaxQueries*2)
 	)
 	for i, bucket := range buckets {
 		query := cwtypes.MetricDataQuery{
@@ -49,65 +53,70 @@ func (man *Manager) buildQueries(buckets []s3types.Bucket) [][]cwtypes.MetricDat
 				Stat:   stat,
 			},
 		}
-		batch = append(batch, query)
-		if len(batch) == MaxQueries {
-			batches = append(batches, batch)
-			batch = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
+		queries = append(queries, query)
+		if len(queries) < MaxQueries {
+			continue
 		}
+		m, n, err := man.getMetricsFromQueries(queries, region)
+		if err != nil {
+			return nil, 0, err
+		}
+		metrics = append(metrics, m...)
+		total += n
+		queries = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
 	}
-	if len(batch) > 0 {
-		batches = append(batches, batch)
+	if len(queries) > 0 {
+		m, n, err := man.getMetricsFromQueries(queries, region)
+		if err != nil {
+			return nil, 0, err
+		}
+		metrics = append(metrics, m...)
+		total += n
 	}
-	return batches
+	return metrics, total, nil
 }
 
-// getMetrics gets the metrics and the total bytes.
-func (man *Manager) getMetrics(batches [][]cwtypes.MetricDataQuery, region string) ([]*Metric, int64, error) {
+func (man *Manager) getMetricsFromQueries(queries []cwtypes.MetricDataQuery, region string) ([]*Metric, int64, error) {
 	var (
-		total     int64
-		metrics   = make([]*Metric, 0, MaxQueries*2)
-		startTime = aws.Time(time.Now().Add(-48 * time.Hour))
-		endTime   = aws.Time(time.Now())
-		opt       = func(o *cloudwatch.Options) { o.Region = region }
+		total   int64
+		token   *string
+		metrics = make([]*Metric, 0, MaxQueries)
+		opt     = func(o *cloudwatch.Options) { o.Region = region }
 	)
-	for _, batch := range batches {
-		batch := batch
-		var token *string
-		for {
-			in := &cloudwatch.GetMetricDataInput{
-				StartTime:         startTime,
-				EndTime:           endTime,
-				MetricDataQueries: batch,
-				NextToken:         token,
+	for {
+		in := &cloudwatch.GetMetricDataInput{
+			StartTime:         startTime,
+			EndTime:           endTime,
+			MetricDataQueries: queries,
+			NextToken:         token,
+		}
+		out, err := man.GetMetricData(man.ctx, in, opt)
+		if err != nil {
+			return nil, 0, err
+		}
+		for _, result := range out.MetricDataResults {
+			var value float64
+			if len(result.Values) == 0 {
+				value = 0
+			} else {
+				value = slices.Max(result.Values)
 			}
-			out, err := man.GetMetricData(man.ctx, in, opt)
-			if err != nil {
-				return nil, 0, err
+			if ok := man.filterFunc(value); !ok {
+				continue
 			}
-			for _, result := range out.MetricDataResults {
-				var value float64
-				if len(result.Values) == 0 {
-					value = 0
-				} else {
-					value = slices.Max(result.Values)
-				}
-				if ok := man.filterFunc(value); !ok {
-					continue
-				}
-				metric := &Metric{
-					BucketName:  aws.ToString(result.Label),
-					Region:      region,
-					MetricName:  man.metricName,
-					StorageType: man.storageType,
-					Value:       value,
-				}
-				metrics = append(metrics, metric)
-				atomic.AddInt64(&total, int64(metric.Value))
+			metric := &Metric{
+				BucketName:  aws.ToString(result.Label),
+				Region:      region,
+				MetricName:  man.metricName,
+				StorageType: man.storageType,
+				Value:       value,
 			}
-			token = out.NextToken
-			if token == nil {
-				break
-			}
+			metrics = append(metrics, metric)
+			atomic.AddInt64(&total, int64(metric.Value))
+		}
+		token = out.NextToken
+		if token == nil {
+			break
 		}
 	}
 	return metrics, total, nil
