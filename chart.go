@@ -108,6 +108,6 @@ func render(pie *charts.Pie) error {
 	if err := page.Render(io.MultiWriter(f)); err != nil {
 		return err
 	}
-	browser.OpenFile(fname) //nolint:errcheck
+	_ = browser.OpenFile(fname)
 	return nil
 }

@@ -121,59 +121,28 @@ type StorageType int
 
 const (
 	StorageTypeNone StorageType = iota
-
-	// S3 Standard:
-
 	StorageTypeStandardStorage
-
-	// S3 Intelligent-Tiering:
-
 	StorageTypeIntelligentTieringFAStorage
 	StorageTypeIntelligentTieringIAStorage
 	StorageTypeIntelligentTieringAAStorage
 	StorageTypeIntelligentTieringAIAStorage
 	StorageTypeIntelligentTieringDAAStorage
-
-	// S3 Standard-Infrequent Access:
-
 	StorageTypeStandardIAStorage
 	StorageTypeStandardIASizeOverhead
 	StorageTypeStandardIAObjectOverhead
-
-	// S3 One Zone-Infrequent Access:
-
 	StorageTypeOneZoneIAStorage
 	StorageTypeOneZoneIASizeOverhead
-
-	// S3 Reduced Redundancy Storage:
-
 	StorageTypeReducedRedundancyStorage
-
-	// S3 Glacier Instant Retrieval:
-
 	StorageTypeGlacierIRSizeOverhead
 	StorageTypeGlacierInstantRetrievalStorage
-
-	// S3 Glacier Flexible Retrieval:
-
 	StorageTypeGlacierStorage
 	StorageTypeGlacierStagingStorage
 	StorageTypeGlacierObjectOverhead
 	StorageTypeGlacierS3ObjectOverhead
-
-	// S3 Glacier Deep Archive:
-
 	StorageTypeDeepArchiveStorage
 	StorageTypeDeepArchiveObjectOverhead
 	StorageTypeDeepArchiveS3ObjectOverhead
 	StorageTypeDeepArchiveStagingStorage
-
-	// S3 Express One Zone:
-
-	// StorageTypeExpressOneZoneStorage
-
-	// fixed value for NumberOfObjects
-
 	StorageTypeAllStorageTypes
 )
 

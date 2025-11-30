@@ -1,33 +1,26 @@
-run:
-  timeout: 5m
+version: "2"
 linters:
+  default: fast
   enable:
-    - dogsled
-    - dupl
-    - errorlint
-    - gocritic
-    - gocyclo
-    - gofmt
-    - gofumpt
+    - errcheck
     - gosec
-    - govet
-    - ineffassign
-    - makezero
-    - misspell
-    - nakedret
-    - predeclared
     - revive
-    - stylecheck
-    - tagliatelle
-    - thelper
-    - tparallel
-    - unconvert
-    - unparam
-    - unused
-    - wastedassign
-    - whitespace
-issues:
-  exclude-rules:
-    - linters:
-        - dupl
-      path: _test\.go
+  disable:
+    - copyloopvar
+    - cyclop
+    - depguard
+    - dupl
+    - funlen
+    - gocognit
+    - goconst
+    - lll
+    - maintidx
+    - mnd
+    - nlreturn
+    - testpackage
+    - wsl
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
