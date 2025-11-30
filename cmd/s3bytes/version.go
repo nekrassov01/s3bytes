@@ -3,15 +3,15 @@ package main
 import "fmt"
 
 // Version is the current version of llcm.
-const Version = "0.0.13"
+const version = "0.0.13"
 
 // Revision is the git revision of llcm.
-var Revision = ""
+var revision = ""
 
 // version returns the version and revision of llcm.
-func version() string {
-	if Revision == "" {
-		return Version
+func getVersion() string {
+	if revision == "" {
+		return version
 	}
-	return fmt.Sprintf("%s (revision: %s)", Version, Revision)
+	return fmt.Sprintf("%s (revision: %s)", version, revision)
 }

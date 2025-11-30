@@ -25,6 +25,7 @@ var (
 
 type app struct {
 	*cli.App
+
 	completion  *cli.StringFlag
 	profile     *cli.StringFlag
 	loglevel    *cli.StringFlag
@@ -95,7 +96,7 @@ func newApp(w, ew io.Writer) *app {
 	}
 	a.App = &cli.App{
 		Name:                 name,
-		Version:              version(),
+		Version:              getVersion(),
 		Usage:                "S3 size checker",
 		Description:          "Check the size of all buckets in S3 in one shot.",
 		HideHelpCommand:      true,
@@ -230,11 +231,11 @@ func (a *app) comp(c *cli.Context) error {
 	}
 	switch n {
 	case bash:
-		fmt.Fprintln(a.Writer, completionBash)
+		_, _ = fmt.Fprintln(a.Writer, completionBash)
 	case zsh:
-		fmt.Fprintln(a.Writer, completionZsh)
+		_, _ = fmt.Fprintln(a.Writer, completionZsh)
 	case pwsh:
-		fmt.Fprintln(a.Writer, completionPwsh)
+		_, _ = fmt.Fprintln(a.Writer, completionPwsh)
 	default:
 	}
 	return nil
