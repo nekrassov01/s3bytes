@@ -15,16 +15,16 @@ import (
 
 func TestManager_getMetrics(t *testing.T) {
 	type fields struct {
-		Client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
+		client      *Client
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
+		ctx     context.Context
 		buckets []s3types.Bucket
 		region  string
 	}
@@ -39,7 +39,7 @@ func TestManager_getMetrics(t *testing.T) {
 		{
 			name: "success",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -59,12 +59,12 @@ func TestManager_getMetrics(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				buckets: []s3types.Bucket{
 					{Name: aws.String("bucket0")},
 					{Name: aws.String("bucket1")},
@@ -93,7 +93,7 @@ func TestManager_getMetrics(t *testing.T) {
 		{
 			name: "error",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -101,12 +101,12 @@ func TestManager_getMetrics(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				buckets: []s3types.Bucket{
 					{Name: aws.String("bucket0")},
 				},
@@ -119,7 +119,7 @@ func TestManager_getMetrics(t *testing.T) {
 		{
 			name: "filter func returns false",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -135,12 +135,12 @@ func TestManager_getMetrics(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return false },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				buckets: []s3types.Bucket{
 					{Name: aws.String("bucket0")},
 				},
@@ -154,16 +154,15 @@ func TestManager_getMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
+				client:      tt.fields.client,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
-			got, got1, err := man.getMetrics(tt.args.buckets, tt.args.region)
+			got, got1, err := man.getMetrics(tt.args.ctx, tt.args.buckets, tt.args.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Manager.getMetrics() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -180,16 +179,16 @@ func TestManager_getMetrics(t *testing.T) {
 
 func TestManager_getMetricsFromQueries(t *testing.T) {
 	type fields struct {
-		Client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
+		client      *Client
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
+		ctx     context.Context
 		queries []cwtypes.MetricDataQuery
 		region  string
 	}
@@ -204,7 +203,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		{
 			name: "success",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -224,12 +223,12 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				queries: []cwtypes.MetricDataQuery{
 					{
 						Id:    aws.String("m0"),
@@ -300,7 +299,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		{
 			name: "error",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -308,12 +307,12 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				queries: []cwtypes.MetricDataQuery{
 					{
 						Id:    aws.String("m0"),
@@ -347,7 +346,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		{
 			name: "filter func returns false",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -363,12 +362,12 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return false },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				queries: []cwtypes.MetricDataQuery{
 					{
 						Id:    aws.String("m0"),
@@ -402,7 +401,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		{
 			name: "result values nil",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, _ *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -418,12 +417,12 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				queries: []cwtypes.MetricDataQuery{
 					{
 						Id:    aws.String("m0"),
@@ -465,7 +464,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		{
 			name: "pagination",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					nil,
 					&mockCloudWatch{
 						GetMetricDataFunc: func(_ context.Context, params *cloudwatch.GetMetricDataInput, _ ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
@@ -494,12 +493,12 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 						},
 					},
 				),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
-				ctx:         context.Background(),
 			},
 			args: args{
+				ctx: context.Background(),
 				queries: []cwtypes.MetricDataQuery{
 					{
 						Id:    aws.String("m0"),
@@ -571,16 +570,15 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
+				client:      tt.fields.client,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
-			got, got1, err := man.getMetricsFromQueries(tt.args.queries, tt.args.region)
+			got, got1, err := man.getMetricsFromQueries(tt.args.ctx, tt.args.queries, tt.args.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Manager.getMetricsFromQueries() error = %v, wantErr %v", err, tt.wantErr)
 				return

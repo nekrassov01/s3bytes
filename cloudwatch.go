@@ -1,6 +1,7 @@
 package s3bytes
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"sync/atomic"
@@ -22,7 +23,7 @@ var (
 	endTime        = aws.Time(time.Now())
 )
 
-func (man *Manager) getMetrics(buckets []s3types.Bucket, region string) ([]*Metric, int64, error) {
+func (man *Manager) getMetrics(ctx context.Context, buckets []s3types.Bucket, region string) ([]*Metric, int64, error) {
 	var (
 		total       int64
 		metricName  = aws.String(man.metricName.String())
@@ -57,7 +58,7 @@ func (man *Manager) getMetrics(buckets []s3types.Bucket, region string) ([]*Metr
 		if len(queries) < MaxQueries {
 			continue
 		}
-		m, n, err := man.getMetricsFromQueries(queries, region)
+		m, n, err := man.getMetricsFromQueries(ctx, queries, region)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -66,7 +67,7 @@ func (man *Manager) getMetrics(buckets []s3types.Bucket, region string) ([]*Metr
 		queries = make([]cwtypes.MetricDataQuery, 0, MaxQueries)
 	}
 	if len(queries) > 0 {
-		m, n, err := man.getMetricsFromQueries(queries, region)
+		m, n, err := man.getMetricsFromQueries(ctx, queries, region)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -76,7 +77,7 @@ func (man *Manager) getMetrics(buckets []s3types.Bucket, region string) ([]*Metr
 	return metrics, total, nil
 }
 
-func (man *Manager) getMetricsFromQueries(queries []cwtypes.MetricDataQuery, region string) ([]*Metric, int64, error) {
+func (man *Manager) getMetricsFromQueries(ctx context.Context, queries []cwtypes.MetricDataQuery, region string) ([]*Metric, int64, error) {
 	var (
 		total   int64
 		token   *string
@@ -90,7 +91,7 @@ func (man *Manager) getMetricsFromQueries(queries []cwtypes.MetricDataQuery, reg
 			MetricDataQueries: queries,
 			NextToken:         token,
 		}
-		out, err := man.GetMetricData(man.ctx, in, opt)
+		out, err := man.client.GetMetricData(ctx, in, opt)
 		if err != nil {
 			return nil, 0, err
 		}

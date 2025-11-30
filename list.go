@@ -6,15 +6,15 @@ import (
 	"sync/atomic"
 )
 
-func (man *Manager) List() (*MetricData, error) {
+func (man *Manager) List(ctx context.Context) (*MetricData, error) {
 	var (
-		total       int64
-		wg          sync.WaitGroup
-		ctx, cancel = context.WithCancel(man.ctx)
-		size        = MaxQueries * 2 * len(man.regions)
-		metricsChan = make(chan []*Metric, size)
-		errorChan   = make(chan error, 1)
-		data        = &MetricData{
+		total             int64
+		wg                sync.WaitGroup
+		cancelCtx, cancel = context.WithCancel(ctx)
+		size              = MaxQueries * 2 * len(man.regions)
+		metricsChan       = make(chan []*Metric, size)
+		errorChan         = make(chan error, 1)
+		data              = &MetricData{
 			Header:  header,
 			Metrics: make([]*Metric, 0, size),
 		}
@@ -28,19 +28,19 @@ func (man *Manager) List() (*MetricData, error) {
 	}
 	for _, region := range man.regions {
 		region := region
-		if err := man.sem.Acquire(ctx, 1); err != nil {
+		if err := man.sem.Acquire(cancelCtx, 1); err != nil {
 			return nil, err
 		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer man.sem.Release(1)
-			buckets, err := man.getBuckets(region)
+			buckets, err := man.getBuckets(cancelCtx, region)
 			if err != nil {
 				errorFunc(err)
 				return
 			}
-			m, n, err := man.getMetrics(buckets, region)
+			m, n, err := man.getMetrics(cancelCtx, buckets, region)
 			if err != nil {
 				errorFunc(err)
 				return
@@ -48,7 +48,7 @@ func (man *Manager) List() (*MetricData, error) {
 			atomic.AddInt64(&total, n)
 			select {
 			case metricsChan <- m:
-			case <-ctx.Done():
+			case <-cancelCtx.Done():
 				return
 			}
 		}()

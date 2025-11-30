@@ -24,7 +24,7 @@ func BenchmarkList(b *testing.B) {
 		values  = []float64{2048}
 	)
 	man := &Manager{
-		Client: newMockClient(
+		client: newMockClient(
 			&mockS3{
 				ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 					for i := 0; i < n; i++ {
@@ -59,11 +59,10 @@ func BenchmarkList(b *testing.B) {
 		storageType: StorageTypeStandardStorage,
 		filterFunc:  func(float64) bool { return true },
 		sem:         semaphore.NewWeighted(NumWorker),
-		ctx:         context.Background(),
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := man.List(); err != nil {
+		if _, err := man.List(context.Background()); err != nil {
 			b.Fatal(err)
 		}
 	}

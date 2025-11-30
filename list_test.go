@@ -3,6 +3,7 @@ package s3bytes
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -10,31 +11,33 @@ import (
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sync/semaphore"
 )
 
 func TestManager_List(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		metricName  MetricName
 		storageType StorageType
 		prefix      *string
 		regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
+	}
+	type args struct {
+		ctx context.Context
 	}
 	tests := []struct {
 		name    string
 		fields  fields
+		args    args
 		want    *MetricData
 		wantErr bool
 	}{
 		{
 			name: "success",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
@@ -67,7 +70,9 @@ func TestManager_List(t *testing.T) {
 				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
-				ctx:         context.Background(),
+			},
+			args: args{
+				ctx: context.Background(),
 			},
 			want: &MetricData{
 				Header: header,
@@ -87,7 +92,7 @@ func TestManager_List(t *testing.T) {
 		{
 			name: "metric error",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
@@ -113,14 +118,16 @@ func TestManager_List(t *testing.T) {
 				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
-				ctx:         context.Background(),
+			},
+			args: args{
+				ctx: context.Background(),
 			},
 			wantErr: true,
 		},
 		{
 			name: "bucket error",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							return nil, errors.New("error")
@@ -146,7 +153,9 @@ func TestManager_List(t *testing.T) {
 				storageType: StorageTypeStandardStorage,
 				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
-				ctx:         context.Background(),
+			},
+			args: args{
+				ctx: context.Background(),
 			},
 			wantErr: true,
 		},
@@ -154,25 +163,21 @@ func TestManager_List(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.metricName,
 				storageType: tt.fields.storageType,
 				prefix:      tt.fields.prefix,
 				regions:     tt.fields.regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
-			got, err := man.List()
+			got, err := man.List(tt.args.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Manager.List() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			//	if !reflect.DeepEqual(got, tt.want) {
-			//		t.Errorf("Manager.List() = %v, want %v", got, tt.want)
-			//	}
-			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf("Manager.List() mismatch (-want +got):\n%s", diff)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Manager.List() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -14,16 +14,16 @@ import (
 
 func TestManager_getBuckets(t *testing.T) {
 	type fields struct {
-		Client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
+		client      *Client
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
+		ctx    context.Context
 		region string
 	}
 	tests := []struct {
@@ -36,7 +36,7 @@ func TestManager_getBuckets(t *testing.T) {
 		{
 			name: "single bucket",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
@@ -53,8 +53,11 @@ func TestManager_getBuckets(t *testing.T) {
 					},
 					nil,
 				),
-				Prefix: nil,
+				prefix: nil,
+			},
+			args: args{
 				ctx:    context.Background(),
+				region: "ap-northeast-1",
 			},
 			want: []types.Bucket{
 				{
@@ -67,7 +70,7 @@ func TestManager_getBuckets(t *testing.T) {
 		{
 			name: "multiple bucket",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
@@ -88,8 +91,11 @@ func TestManager_getBuckets(t *testing.T) {
 					},
 					nil,
 				),
-				Prefix: nil,
+				prefix: nil,
+			},
+			args: args{
 				ctx:    context.Background(),
+				region: "ap-northeast-1",
 			},
 			want: []types.Bucket{
 				{
@@ -106,7 +112,7 @@ func TestManager_getBuckets(t *testing.T) {
 		{
 			name: "error",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							return nil, errors.New("failed to list buckets")
@@ -115,13 +121,17 @@ func TestManager_getBuckets(t *testing.T) {
 					nil,
 				),
 			},
+			args: args{
+				ctx:    context.Background(),
+				region: "ap-northeast-1",
+			},
 			want:    nil,
 			wantErr: true,
 		},
 		{
 			name: "no buckets",
 			fields: fields{
-				Client: newMockClient(
+				client: newMockClient(
 					&mockS3{
 						ListBucketsFunc: func(_ context.Context, _ *s3.ListBucketsInput, _ ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 							out := &s3.ListBucketsOutput{
@@ -134,6 +144,10 @@ func TestManager_getBuckets(t *testing.T) {
 					nil,
 				),
 			},
+			args: args{
+				ctx:    context.Background(),
+				region: "ap-northeast-1",
+			},
 			want:    []types.Bucket{},
 			wantErr: false,
 		},
@@ -141,16 +155,15 @@ func TestManager_getBuckets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
+				client:      tt.fields.client,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
-			got, err := man.getBuckets(tt.args.region)
+			got, err := man.getBuckets(tt.args.ctx, tt.args.region)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Manager.getBuckets() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,6 +1,7 @@
 package s3bytes
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -24,6 +25,15 @@ type Metric struct {
 	MetricName  MetricName
 	StorageType StorageType
 	Value       float64
+}
+
+func (t *Metric) GetField(key string) (any, error) {
+	switch key {
+	case "bytes":
+		return t.Value, nil
+	default:
+		return 0, fmt.Errorf("field not found: %q", key)
+	}
 }
 
 func (t *Metric) toInput() []any {

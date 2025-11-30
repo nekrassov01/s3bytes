@@ -1,13 +1,15 @@
 package s3bytes
 
 import (
+	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // getBuckets returns the buckets in the specified region.
-func (man *Manager) getBuckets(region string) ([]types.Bucket, error) {
+func (man *Manager) getBuckets(ctx context.Context, region string) ([]types.Bucket, error) {
 	in := &s3.ListBucketsInput{
 		BucketRegion: aws.String(region),
 	}
@@ -17,7 +19,7 @@ func (man *Manager) getBuckets(region string) ([]types.Bucket, error) {
 	opt := func(o *s3.Options) {
 		o.Region = region
 	}
-	out, err := man.ListBuckets(man.ctx, in, opt)
+	out, err := man.client.ListBuckets(ctx, in, opt)
 	if err != nil {
 		return nil, err
 	}

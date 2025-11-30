@@ -27,12 +27,11 @@ func TestNewManager(t *testing.T) {
 				client: newMockClient(&mockS3{}, &mockCloudWatch{}),
 			},
 			want: &Manager{
-				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
 				metricName:  MetricNameNone,
 				storageType: StorageTypeNone,
 				prefix:      nil,
 				regions:     DefaultRegions,
-				ctx:         context.Background(),
 			},
 		},
 		{
@@ -42,18 +41,17 @@ func TestNewManager(t *testing.T) {
 				client: nil,
 			},
 			want: &Manager{
-				Client:      nil,
+				client:      nil,
 				metricName:  MetricNameNone,
 				storageType: StorageTypeNone,
 				prefix:      nil,
 				regions:     DefaultRegions,
-				ctx:         context.Background(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewManager(tt.args.ctx, tt.args.client)
+			got := NewManager(tt.args.client)
 			opts := cmpopts.IgnoreUnexported(*got)
 			if diff := cmp.Diff(got, tt.want, opts); diff != "" {
 				t.Errorf("NewManager() mismatch (-want +got):\n%s", diff)
@@ -64,14 +62,13 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_SetRegions(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		MetricName  MetricName
 		StorageType StorageType
 		Prefix      *string
 		Regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
 		regions []string
@@ -107,14 +104,13 @@ func TestManager_SetRegions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.MetricName,
 				storageType: tt.fields.StorageType,
 				prefix:      tt.fields.Prefix,
 				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
 			if err := man.SetRegion(tt.args.regions); (err != nil) != tt.wantErr {
 				t.Errorf("Manager.SetRegion() error = %v, wantErr %v", err, tt.wantErr)
@@ -125,14 +121,13 @@ func TestManager_SetRegions(t *testing.T) {
 
 func TestManager_SetPrefix(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		MetricName  MetricName
 		StorageType StorageType
 		Prefix      *string
 		Regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
 		prefix string
@@ -168,14 +163,13 @@ func TestManager_SetPrefix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.MetricName,
 				storageType: tt.fields.StorageType,
 				prefix:      tt.fields.Prefix,
 				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
 			if err := man.SetPrefix(tt.args.prefix); (err != nil) != tt.wantErr {
 				t.Errorf("Manager.SetPrefix() error = %v, wantErr %v", err, tt.wantErr)
@@ -186,14 +180,13 @@ func TestManager_SetPrefix(t *testing.T) {
 
 func TestManager_SetFilter(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		MetricName  MetricName
 		StorageType StorageType
 		Prefix      *string
 		Regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
 		expr string
@@ -359,14 +352,13 @@ func TestManager_SetFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.MetricName,
 				storageType: tt.fields.StorageType,
 				prefix:      tt.fields.Prefix,
 				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
 			if err := man.SetFilter(tt.args.expr); (err != nil) != tt.wantErr {
 				t.Errorf("Manager.SetFilter() error = %v, wantErr %v", err, tt.wantErr)
@@ -377,14 +369,13 @@ func TestManager_SetFilter(t *testing.T) {
 
 func TestManager_SetMetric(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		MetricName  MetricName
 		StorageType StorageType
 		Prefix      *string
 		Regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	type args struct {
 		metricName  MetricName
@@ -424,14 +415,13 @@ func TestManager_SetMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.MetricName,
 				storageType: tt.fields.StorageType,
 				prefix:      tt.fields.Prefix,
 				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
 			if err := man.SetMetric(tt.args.metricName, tt.args.storageType); (err != nil) != tt.wantErr {
 				t.Errorf("Manager.SetMetric() error = %v, wantErr %v", err, tt.wantErr)
@@ -442,14 +432,13 @@ func TestManager_SetMetric(t *testing.T) {
 
 func TestManager_String(t *testing.T) {
 	type fields struct {
-		Client      *Client
+		client      *Client
 		MetricName  MetricName
 		StorageType StorageType
 		Prefix      *string
 		Regions     []string
 		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
-		ctx         context.Context
 	}
 	tests := []struct {
 		name   string
@@ -459,11 +448,10 @@ func TestManager_String(t *testing.T) {
 		{
 			name: "normal",
 			fields: fields{
-				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
 				MetricName:  MetricNameBucketSizeBytes,
 				StorageType: StorageTypeStandardStorage,
 				Prefix:      nil,
-				ctx:         context.Background(),
 			},
 			want: `{
   "metricName": "BucketSizeBytes",
@@ -475,11 +463,10 @@ func TestManager_String(t *testing.T) {
 		{
 			name: "prefixed",
 			fields: fields{
-				Client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
+				client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
 				MetricName:  MetricNameBucketSizeBytes,
 				StorageType: StorageTypeStandardStorage,
 				Prefix:      aws.String("test"),
-				ctx:         context.Background(),
 			},
 			want: `{
   "metricName": "BucketSizeBytes",
@@ -502,14 +489,13 @@ func TestManager_String(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
-				Client:      tt.fields.Client,
+				client:      tt.fields.client,
 				metricName:  tt.fields.MetricName,
 				storageType: tt.fields.StorageType,
 				prefix:      tt.fields.Prefix,
 				regions:     tt.fields.Regions,
 				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
-				ctx:         tt.fields.ctx,
 			}
 			if diff := cmp.Diff(man.String(), tt.want); diff != "" {
 				t.Errorf("Manager.String() mismatch (-want +got):\n%s", diff)

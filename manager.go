@@ -1,7 +1,6 @@
 package s3bytes
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,26 +13,22 @@ import (
 
 // Manager is a manager struct for the s3bytes package.
 type Manager struct {
-	*Client `json:"-"`
-
+	client      *Client `json:"-"`
 	metricName  MetricName
 	storageType StorageType
 	prefix      *string
 	regions     []string
-
-	filterFunc func(float64) bool
-	sem        *semaphore.Weighted
-	ctx        context.Context
+	filterFunc  func(float64) bool
+	sem         *semaphore.Weighted
 }
 
 // NewManager creates a new manager.
-func NewManager(ctx context.Context, client *Client) *Manager {
+func NewManager(client *Client) *Manager {
 	return &Manager{
-		Client:     client,
+		client:     client,
 		regions:    DefaultRegions,
 		filterFunc: func(float64) bool { return true },
 		sem:        semaphore.NewWeighted(NumWorker),
-		ctx:        ctx,
 	}
 }
 

@@ -144,7 +144,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		client := s3bytes.NewClient(cfg)
 
 		// initialize the manager
-		man := s3bytes.NewManager(ctx, client)
+		man := s3bytes.NewManager(client)
 
 		// set regions to the manager
 		if err := man.SetRegion(cmd.StringSlice(region.Name)); err != nil {
@@ -167,7 +167,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		}
 
 		// run list operation
-		data, err := man.List()
+		data, err := man.List(ctx)
 		if err != nil {
 			return err
 		}
