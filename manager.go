@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/nekrassov01/filter"
 	"golang.org/x/sync/semaphore"
+)
+
+type (
+	filterExpr   = *filter.Expr
+	filterTarget = filter.Target
 )
 
 // Manager is a manager struct for the s3bytes package.
@@ -18,17 +22,17 @@ type Manager struct {
 	storageType StorageType
 	prefix      *string
 	regions     []string
-	filterFunc  func(float64) bool
+	filterExpr  filterExpr
+	filterRaw   string
 	sem         *semaphore.Weighted
 }
 
 // NewManager creates a new manager.
 func NewManager(client *Client) *Manager {
 	return &Manager{
-		client:     client,
-		regions:    DefaultRegions,
-		filterFunc: func(float64) bool { return true },
-		sem:        semaphore.NewWeighted(NumWorker),
+		client:  client,
+		regions: DefaultRegions,
+		sem:     semaphore.NewWeighted(NumWorker),
 	}
 }
 
@@ -59,46 +63,16 @@ func (man *Manager) SetPrefix(prefix string) error {
 }
 
 // SetFilter sets the filter expressions.
-func (man *Manager) SetFilter(expr string) error {
-	if expr == "" {
+func (man *Manager) SetFilter(raw string) error {
+	if raw == "" {
 		return nil
 	}
-	tokens := strings.SplitN(expr, " ", 2)
-	if len(tokens) < 2 {
-		return fmt.Errorf("invalid syntax: %q", expr)
-	}
-	operator := tokens[0]
-	v, err := strconv.ParseFloat(tokens[1], 64)
+	expr, err := filter.Parse(raw)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse filter: %w", err)
 	}
-	operators := map[string]func(float64, float64) bool{
-		">": func(a, b float64) bool {
-			return a > b
-		},
-		">=": func(a, b float64) bool {
-			return a >= b
-		},
-		"<": func(a, b float64) bool {
-			return a < b
-		},
-		"<=": func(a, b float64) bool {
-			return a <= b
-		},
-		"==": func(a, b float64) bool {
-			return a == b
-		},
-		"!=": func(a, b float64) bool {
-			return a != b
-		},
-	}
-	compare, ok := operators[operator]
-	if !ok {
-		return fmt.Errorf("invalid operator: %q", operator)
-	}
-	man.filterFunc = func(f float64) bool {
-		return compare(f, v)
-	}
+	man.filterExpr = expr
+	man.filterRaw = raw
 	return nil
 }
 

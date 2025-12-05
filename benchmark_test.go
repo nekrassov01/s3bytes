@@ -57,7 +57,6 @@ func BenchmarkList(b *testing.B) {
 		regions:     []string{"us-east-1"},
 		metricName:  MetricNameBucketSizeBytes,
 		storageType: StorageTypeStandardStorage,
-		filterFunc:  func(float64) bool { return true },
 		sem:         semaphore.NewWeighted(NumWorker),
 	}
 	b.ResetTimer()

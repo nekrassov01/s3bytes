@@ -21,7 +21,6 @@ func TestManager_List(t *testing.T) {
 		storageType StorageType
 		prefix      *string
 		regions     []string
-		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -68,7 +67,6 @@ func TestManager_List(t *testing.T) {
 				regions:     []string{"ap-northeast-1"},
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
 			},
 			args: args{
@@ -116,7 +114,6 @@ func TestManager_List(t *testing.T) {
 				regions:     []string{"ap-northeast-1"},
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
 			},
 			args: args{
@@ -151,7 +148,6 @@ func TestManager_List(t *testing.T) {
 				regions:     []string{"ap-northeast-1"},
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 				sem:         semaphore.NewWeighted(NumWorker),
 			},
 			args: args{
@@ -168,7 +164,6 @@ func TestManager_List(t *testing.T) {
 				storageType: tt.fields.storageType,
 				prefix:      tt.fields.prefix,
 				regions:     tt.fields.regions,
-				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
 			}
 			got, err := man.List(tt.args.ctx)

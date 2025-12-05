@@ -19,7 +19,6 @@ func TestManager_getBuckets(t *testing.T) {
 		storageType StorageType
 		prefix      *string
 		regions     []string
-		filterFunc  func(float64) bool
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -160,7 +159,6 @@ func TestManager_getBuckets(t *testing.T) {
 				storageType: tt.fields.storageType,
 				prefix:      tt.fields.prefix,
 				regions:     tt.fields.regions,
-				filterFunc:  tt.fields.filterFunc,
 				sem:         tt.fields.sem,
 			}
 			got, err := man.getBuckets(tt.args.ctx, tt.args.region)

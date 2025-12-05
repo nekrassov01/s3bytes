@@ -102,15 +102,21 @@ func (man *Manager) getMetricsFromQueries(ctx context.Context, queries []cwtypes
 			} else {
 				value = slices.Max(result.Values)
 			}
-			if ok := man.filterFunc(value); !ok {
-				continue
-			}
 			metric := &Metric{
 				BucketName:  aws.ToString(result.Label),
 				Region:      region,
 				MetricName:  man.metricName,
 				StorageType: man.storageType,
 				Value:       value,
+			}
+			if man.filterExpr != nil {
+				ok, err := man.filterExpr.Eval(metric)
+				if err != nil {
+					return nil, 0, err
+				}
+				if !ok {
+					continue
+				}
 			}
 			metrics = append(metrics, metric)
 			atomic.AddInt64(&total, int64(metric.Value))

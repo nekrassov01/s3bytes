@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	cwtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/nekrassov01/filter"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -20,7 +21,8 @@ func TestManager_getMetrics(t *testing.T) {
 		storageType StorageType
 		prefix      *string
 		regions     []string
-		filterFunc  func(float64) bool
+		filterExpr  filterExpr
+		filterRaw   string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -61,7 +63,6 @@ func TestManager_getMetrics(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 			},
 			args: args{
 				ctx: context.Background(),
@@ -103,7 +104,6 @@ func TestManager_getMetrics(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 			},
 			args: args{
 				ctx: context.Background(),
@@ -117,7 +117,7 @@ func TestManager_getMetrics(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "filter func returns false",
+			name: "filter returns false",
 			fields: fields{
 				client: newMockClient(
 					nil,
@@ -137,7 +137,8 @@ func TestManager_getMetrics(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return false },
+				filterExpr:  func() filterExpr { expr, _ := filter.Parse(`bytes == 0`); return expr }(),
+				filterRaw:   "bytes == 0",
 			},
 			args: args{
 				ctx: context.Background(),
@@ -159,7 +160,8 @@ func TestManager_getMetrics(t *testing.T) {
 				storageType: tt.fields.storageType,
 				prefix:      tt.fields.prefix,
 				regions:     tt.fields.regions,
-				filterFunc:  tt.fields.filterFunc,
+				filterExpr:  tt.fields.filterExpr,
+				filterRaw:   tt.fields.filterRaw,
 				sem:         tt.fields.sem,
 			}
 			got, got1, err := man.getMetrics(tt.args.ctx, tt.args.buckets, tt.args.region)
@@ -184,7 +186,8 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 		storageType StorageType
 		prefix      *string
 		regions     []string
-		filterFunc  func(float64) bool
+		filterExpr  filterExpr
+		filterRaw   string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -225,7 +228,6 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 			},
 			args: args{
 				ctx: context.Background(),
@@ -309,7 +311,6 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 			},
 			args: args{
 				ctx: context.Background(),
@@ -344,7 +345,7 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "filter func returns false",
+			name: "filter returns false",
 			fields: fields{
 				client: newMockClient(
 					nil,
@@ -364,7 +365,8 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return false },
+				filterExpr:  func() filterExpr { expr, _ := filter.Parse(`bytes == 0`); return expr }(),
+				filterRaw:   "bytes == 0",
 			},
 			args: args{
 				ctx: context.Background(),
@@ -419,7 +421,8 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
+				filterExpr:  nil,
+				filterRaw:   "",
 			},
 			args: args{
 				ctx: context.Background(),
@@ -495,7 +498,6 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				),
 				metricName:  MetricNameBucketSizeBytes,
 				storageType: StorageTypeStandardStorage,
-				filterFunc:  func(float64) bool { return true },
 			},
 			args: args{
 				ctx: context.Background(),
@@ -575,7 +577,8 @@ func TestManager_getMetricsFromQueries(t *testing.T) {
 				storageType: tt.fields.storageType,
 				prefix:      tt.fields.prefix,
 				regions:     tt.fields.regions,
-				filterFunc:  tt.fields.filterFunc,
+				filterExpr:  tt.fields.filterExpr,
+				filterRaw:   tt.fields.filterRaw,
 				sem:         tt.fields.sem,
 			}
 			got, got1, err := man.getMetricsFromQueries(tt.args.ctx, tt.args.queries, tt.args.region)

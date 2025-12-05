@@ -13,6 +13,8 @@ var header = []string{
 	"Value",
 }
 
+var _ filterTarget = (*Metric)(nil)
+
 type MetricData struct {
 	Header  []string
 	Metrics []*Metric

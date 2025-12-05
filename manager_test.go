@@ -63,11 +63,10 @@ func TestNewManager(t *testing.T) {
 func TestManager_SetRegions(t *testing.T) {
 	type fields struct {
 		client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
-		filterFunc  func(float64) bool
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -105,11 +104,10 @@ func TestManager_SetRegions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				client:      tt.fields.client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
-				filterFunc:  tt.fields.filterFunc,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				sem:         tt.fields.sem,
 			}
 			if err := man.SetRegion(tt.args.regions); (err != nil) != tt.wantErr {
@@ -122,11 +120,10 @@ func TestManager_SetRegions(t *testing.T) {
 func TestManager_SetPrefix(t *testing.T) {
 	type fields struct {
 		client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
-		filterFunc  func(float64) bool
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -164,11 +161,10 @@ func TestManager_SetPrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				client:      tt.fields.client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
-				filterFunc:  tt.fields.filterFunc,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				sem:         tt.fields.sem,
 			}
 			if err := man.SetPrefix(tt.args.prefix); (err != nil) != tt.wantErr {
@@ -181,11 +177,10 @@ func TestManager_SetPrefix(t *testing.T) {
 func TestManager_SetFilter(t *testing.T) {
 	type fields struct {
 		client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
-		filterFunc  func(float64) bool
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -205,7 +200,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "> 100",
 			args: args{
-				expr: "> 100",
+				expr: "bytes > 100",
 			},
 			cases: []struct {
 				v       float64
@@ -221,7 +216,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: ">= 200",
 			args: args{
-				expr: ">= 200",
+				expr: "bytes >= 200",
 			},
 			cases: []struct {
 				v       float64
@@ -237,7 +232,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "< 300",
 			args: args{
-				expr: "< 300",
+				expr: "bytes < 300",
 			},
 			cases: []struct {
 				v       float64
@@ -253,7 +248,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "<= 400",
 			args: args{
-				expr: "<= 400",
+				expr: "bytes <= 400",
 			},
 			cases: []struct {
 				v       float64
@@ -269,7 +264,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "== 500",
 			args: args{
-				expr: "== 500",
+				expr: "bytes == 500",
 			},
 			cases: []struct {
 				v       float64
@@ -285,7 +280,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "!= 600",
 			args: args{
-				expr: "!= 600",
+				expr: "bytes != 600",
 			},
 			cases: []struct {
 				v       float64
@@ -327,7 +322,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "invalid operator",
 			args: args{
-				expr: "=~ 100",
+				expr: "bytes <> 100",
 			},
 			cases: []struct {
 				v       float64
@@ -339,7 +334,7 @@ func TestManager_SetFilter(t *testing.T) {
 		{
 			name: "non numeric value",
 			args: args{
-				expr: "> abc",
+				expr: "bytes > abc",
 			},
 			cases: []struct {
 				v       float64
@@ -353,11 +348,10 @@ func TestManager_SetFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				client:      tt.fields.client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
-				filterFunc:  tt.fields.filterFunc,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				sem:         tt.fields.sem,
 			}
 			if err := man.SetFilter(tt.args.expr); (err != nil) != tt.wantErr {
@@ -370,11 +364,10 @@ func TestManager_SetFilter(t *testing.T) {
 func TestManager_SetMetric(t *testing.T) {
 	type fields struct {
 		client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
-		filterFunc  func(float64) bool
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		sem         *semaphore.Weighted
 	}
 	type args struct {
@@ -416,11 +409,10 @@ func TestManager_SetMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				client:      tt.fields.client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
-				filterFunc:  tt.fields.filterFunc,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				sem:         tt.fields.sem,
 			}
 			if err := man.SetMetric(tt.args.metricName, tt.args.storageType); (err != nil) != tt.wantErr {
@@ -433,11 +425,10 @@ func TestManager_SetMetric(t *testing.T) {
 func TestManager_String(t *testing.T) {
 	type fields struct {
 		client      *Client
-		MetricName  MetricName
-		StorageType StorageType
-		Prefix      *string
-		Regions     []string
-		filterFunc  func(float64) bool
+		metricName  MetricName
+		storageType StorageType
+		prefix      *string
+		regions     []string
 		sem         *semaphore.Weighted
 	}
 	tests := []struct {
@@ -449,9 +440,9 @@ func TestManager_String(t *testing.T) {
 			name: "normal",
 			fields: fields{
 				client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				Prefix:      nil,
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
+				prefix:      nil,
 			},
 			want: `{
   "metricName": "BucketSizeBytes",
@@ -464,9 +455,9 @@ func TestManager_String(t *testing.T) {
 			name: "prefixed",
 			fields: fields{
 				client:      newMockClient(&mockS3{}, &mockCloudWatch{}),
-				MetricName:  MetricNameBucketSizeBytes,
-				StorageType: StorageTypeStandardStorage,
-				Prefix:      aws.String("test"),
+				metricName:  MetricNameBucketSizeBytes,
+				storageType: StorageTypeStandardStorage,
+				prefix:      aws.String("test"),
 			},
 			want: `{
   "metricName": "BucketSizeBytes",
@@ -490,11 +481,10 @@ func TestManager_String(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			man := &Manager{
 				client:      tt.fields.client,
-				metricName:  tt.fields.MetricName,
-				storageType: tt.fields.StorageType,
-				prefix:      tt.fields.Prefix,
-				regions:     tt.fields.Regions,
-				filterFunc:  tt.fields.filterFunc,
+				metricName:  tt.fields.metricName,
+				storageType: tt.fields.storageType,
+				prefix:      tt.fields.prefix,
+				regions:     tt.fields.regions,
 				sem:         tt.fields.sem,
 			}
 			if diff := cmp.Diff(man.String(), tt.want); diff != "" {
