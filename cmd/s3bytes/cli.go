@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"io"
+	"log/slog"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/dustin/go-humanize"
-	"github.com/nekrassov01/logwrapper/log"
+	sdk "github.com/nekrassov01/logger/aws"
+	"github.com/nekrassov01/logger/log"
 	"github.com/nekrassov01/s3bytes"
 	"github.com/urfave/cli/v3"
 )
@@ -18,13 +20,26 @@ const (
 )
 
 var (
-	logger          = &log.AppLogger{}
-	defaultLogLevel = log.InfoLevel
-	defaultLogStyle = log.DefaultStyles()
+	logger = &log.Logger{}
 )
 
 func newCmd(w, ew io.Writer) *cli.Command {
-	logger = log.NewAppLogger(ew, defaultLogLevel, defaultLogStyle, label)
+	var (
+		withLevel  = log.WithLevel(slog.LevelInfo)
+		withLabel  = log.WithLabel("S3BYTES:")
+		withTime   = log.WithTime(true)
+		withStyle  = log.WithStyle(log.Style1())
+		withCaller = log.WithCaller(false)
+	)
+
+	handler := log.NewCLIHandler(ew,
+		withLevel,
+		withLabel,
+		withTime,
+		withStyle,
+		withCaller,
+	)
+	logger = log.NewLogger(handler)
 
 	profile := &cli.StringFlag{
 		Name:    "profile",
@@ -38,7 +53,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		Aliases: []string{"l"},
 		Usage:   "set log level",
 		Sources: cli.EnvVars(label + "_LOG_LEVEL"),
-		Value:   log.InfoLevel.String(),
+		Value:   slog.LevelInfo.String(),
 	}
 
 	region := &cli.StringSliceFlag{
@@ -84,23 +99,29 @@ func newCmd(w, ew io.Writer) *cli.Command {
 	}
 
 	before := func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-		// parse log level passed as string
-		level, err := log.ParseLevel(cmd.String(loglevel.Name))
-		if err != nil {
-			return ctx, err
-		}
-
-		// set logger for the application
-		logger.SetLevel(level)
-
 		// load aws config with the specified profile
 		cfg, err := s3bytes.LoadConfig(ctx, cmd.String(profile.Name))
 		if err != nil {
 			return ctx, err
 		}
 
-		// set logger for the AWS SDK
-		cfg.Logger = log.NewSDKLogger(ew, level, defaultLogStyle, "SDK")
+		// parse log level
+		var level slog.Level
+		if err := level.UnmarshalText([]byte(cmd.String(loglevel.Name))); err != nil {
+			level = slog.LevelInfo
+		}
+
+		// set logger options based on the log level
+		withLevel = log.WithLevel(level)
+		withCaller = log.WithCaller(level <= slog.LevelDebug)
+		handler = log.NewCLIHandler(ew,
+			withLevel,
+			withLabel,
+			withTime,
+			withStyle,
+			withCaller,
+		)
+		cfg.Logger = sdk.NewLogger(handler)
 		cfg.ClientLogMode = aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
 
 		// set aws config to the metadata
