@@ -1,7 +1,7 @@
 s3bytes
 =======
 
-[![CI](https://github.com/nekrassov01/s3bytes/actions/workflows/ci.yml/badge.svg)](https://github.com/nekrassov01/s3bytes/actions/workflows/ci.yml)
+[![CI](https://github.com/nekrassov01/s3bytes/actions/workflows/ci.yaml/badge.svg)](https://github.com/nekrassov01/s3bytes/actions/workflows/ci.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nekrassov01/s3bytes)](https://goreportcard.com/report/github.com/nekrassov01/s3bytes)
 ![GitHub](https://img.shields.io/github/license/nekrassov01/s3bytes)
 ![GitHub](https://img.shields.io/github/v/release/nekrassov01/s3bytes)
