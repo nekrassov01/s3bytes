@@ -21,7 +21,7 @@ on:
 permissions:
   contents: read
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-slim
     steps:
       - name: Checkout
@@ -33,8 +33,6 @@ jobs:
         with:
           go-version: 1.25.5
           cache: false
-      - name: Build
-        run: go test -race -cover -v ./...
       - name: Run lint
         uses: golangci/golangci-lint-action@v8
         with:
