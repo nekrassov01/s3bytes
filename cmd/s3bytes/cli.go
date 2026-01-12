@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/dustin/go-humanize"
@@ -25,21 +24,18 @@ var (
 
 func newCmd(w, ew io.Writer) *cli.Command {
 	var (
-		withLevel  = log.WithLevel(slog.LevelInfo)
-		withLabel  = log.WithLabel("S3BYTES:")
-		withTime   = log.WithTime(true)
-		withStyle  = log.WithStyle(log.Style1())
-		withCaller = log.WithCaller(false)
+		withTime  = log.WithTime(true)
+		withStyle = log.WithStyle(log.Style1())
+		withLabel = log.WithLabel("S3BYTES:")
 	)
 
-	handler := log.NewCLIHandler(ew,
-		withLevel,
-		withLabel,
+	logger = log.NewLogger(log.NewCLIHandler(ew,
+		log.WithLevel(slog.LevelInfo),
+		log.WithCaller(false),
 		withTime,
 		withStyle,
-		withCaller,
-	)
-	logger = log.NewLogger(handler)
+		withLabel,
+	))
 
 	profile := &cli.StringFlag{
 		Name:    "profile",
@@ -112,16 +108,22 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		}
 
 		// set logger options based on the log level
-		withLevel = log.WithLevel(level)
-		withCaller = log.WithCaller(level <= slog.LevelDebug)
-		handler = log.NewCLIHandler(ew,
+		withLevel := log.WithLevel(level)
+		withCaller := log.WithCaller(level <= slog.LevelDebug)
+		logger = log.NewLogger(log.NewCLIHandler(ew,
 			withLevel,
-			withLabel,
+			withCaller,
 			withTime,
 			withStyle,
+			withLabel,
+		))
+		cfg.Logger = sdk.NewLogger(log.NewCLIHandler(ew,
+			withLevel,
 			withCaller,
-		)
-		cfg.Logger = sdk.NewLogger(handler)
+			withTime,
+			withStyle,
+			log.WithLabel("SDK:"),
+		))
 		cfg.ClientLogMode = aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
 
 		// set aws config to the metadata
@@ -152,7 +154,6 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		// logging at process start
 		logger.Info(
 			"started",
-			"at", time.Now().Format(time.RFC3339),
 			"metricName", metricName,
 			"storageType", storageType,
 			"output", outputType,
