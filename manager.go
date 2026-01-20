@@ -102,6 +102,6 @@ func (man *Manager) String() string {
 		Prefix:      man.prefix,
 		Regions:     man.regions,
 	}
-	b, _ := json.MarshalIndent(s, "", "  ")
+	b, _ := json.Marshal(s)
 	return string(b)
 }

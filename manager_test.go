@@ -444,12 +444,7 @@ func TestManager_String(t *testing.T) {
 				storageType: StorageTypeStandardStorage,
 				prefix:      nil,
 			},
-			want: `{
-  "metricName": "BucketSizeBytes",
-  "storageType": "StandardStorage",
-  "prefix": null,
-  "regions": null
-}`,
+			want: `{"metricName":"BucketSizeBytes","storageType":"StandardStorage","prefix":null,"regions":null}`,
 		},
 		{
 			name: "prefixed",
@@ -459,22 +454,12 @@ func TestManager_String(t *testing.T) {
 				storageType: StorageTypeStandardStorage,
 				prefix:      aws.String("test"),
 			},
-			want: `{
-  "metricName": "BucketSizeBytes",
-  "storageType": "StandardStorage",
-  "prefix": "test",
-  "regions": null
-}`,
+			want: `{"metricName":"BucketSizeBytes","storageType":"StandardStorage","prefix":"test","regions":null}`,
 		},
 		{
 			name:   "empty",
 			fields: fields{},
-			want: `{
-  "metricName": "none",
-  "storageType": "none",
-  "prefix": null,
-  "regions": null
-}`,
+			want:   `{"metricName":"none","storageType":"none","prefix":null,"regions":null}`,
 		},
 	}
 	for _, tt := range tests {

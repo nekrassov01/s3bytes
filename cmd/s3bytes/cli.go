@@ -23,19 +23,7 @@ var (
 )
 
 func newCmd(w, ew io.Writer) *cli.Command {
-	var (
-		withTime  = log.WithTime(true)
-		withStyle = log.WithStyle(log.Style1())
-		withLabel = log.WithLabel("S3BYTES:")
-	)
-
-	logger = log.NewLogger(log.NewCLIHandler(ew,
-		log.WithLevel(slog.LevelInfo),
-		log.WithCaller(false),
-		withTime,
-		withStyle,
-		withLabel,
-	))
+	logger = log.NewLogger(log.NewCLIHandler(io.Discard))
 
 	profile := &cli.StringFlag{
 		Name:    "profile",
@@ -107,22 +95,29 @@ func newCmd(w, ew io.Writer) *cli.Command {
 			level = slog.LevelInfo
 		}
 
-		// set logger options based on the log level
+		// set logger options
+		s := log.Style2()
+		s.Caller.Fullpath = true
 		withLevel := log.WithLevel(level)
 		withCaller := log.WithCaller(level <= slog.LevelDebug)
+		withStyle := log.WithStyle(s)
+
+		// create logger for application
 		logger = log.NewLogger(log.NewCLIHandler(ew,
+			log.WithLabel("S3BYTES:"),
+			log.WithTime(true),
 			withLevel,
 			withCaller,
-			withTime,
 			withStyle,
-			withLabel,
 		))
+
+		// create logger for aws sdk
 		cfg.Logger = sdk.NewLogger(log.NewCLIHandler(ew,
+			log.WithLabel("SDK:"),
+			log.WithTime(false),
 			withLevel,
 			withCaller,
-			withTime,
 			withStyle,
-			log.WithLabel("SDK:"),
 		))
 		cfg.ClientLogMode = aws.LogRequest | aws.LogResponse | aws.LogRetries | aws.LogSigning | aws.LogDeprecatedUsage
 
@@ -230,5 +225,5 @@ func newCmd(w, ew io.Writer) *cli.Command {
 }
 
 func debug(man *s3bytes.Manager) {
-	logger.Debug("Manager\n" + man.String() + "\n")
+	logger.Debug("ManagerState: " + man.String())
 }
