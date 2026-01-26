@@ -27,13 +27,10 @@ func (man *Manager) List(ctx context.Context) (*MetricData, error) {
 		}
 	}
 	for _, region := range man.regions {
-		region := region
 		if err := man.sem.Acquire(cancelCtx, 1); err != nil {
 			return nil, err
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer man.sem.Release(1)
 			buckets, err := man.getBuckets(cancelCtx, region)
 			if err != nil {
@@ -51,7 +48,7 @@ func (man *Manager) List(ctx context.Context) (*MetricData, error) {
 			case <-cancelCtx.Done():
 				return
 			}
-		}()
+		})
 	}
 	go func() {
 		wg.Wait()
