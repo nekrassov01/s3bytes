@@ -31,7 +31,7 @@ type Metric struct {
 
 func (t *Metric) GetField(key string) (any, error) {
 	switch key {
-	case "bytes":
+	case "bytes", "Bytes", "value", "Value":
 		return t.Value, nil
 	default:
 		return 0, fmt.Errorf("field not found: %q", key)
