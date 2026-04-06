@@ -6,6 +6,9 @@ import (
 	"sync/atomic"
 )
 
+// List retrieves the metrics data for all regions and returns it as a MetricData struct.
+// It uses concurrency to fetch the data from multiple regions simultaneously,
+// and handles errors gracefully by canceling the context if any error occurs.
 func (man *Manager) List(ctx context.Context) (*MetricData, error) {
 	var (
 		total             int64
