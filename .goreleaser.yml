@@ -49,3 +49,5 @@ brews:
     homepage: "https://github.com/nekrassov01/s3bytes"
     license: "MIT"
     directory: Formula
+release:
+  use_existing_draft: true
