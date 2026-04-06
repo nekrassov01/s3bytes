@@ -4,8 +4,8 @@ PKG := github.com/nekrassov01/$(NAME)
 CMD_PATH := ./cmd/$(NAME)/
 GOBIN ?= $(shell go env GOPATH)/bin
 
-VERSION := $$(make show-version)
-REVISION := $$(make show-revision)
+VERSION := $$(make version)
+REVISION := $$(make revision)
 LDFLAGS := "-s -w -X $(PKG).version=$(VERSION) -X $(PKG).revision=$(REVISION)"
 
 HAS_LINT := $(shell command -v $(GOBIN)/golangci-lint 2> /dev/null)
