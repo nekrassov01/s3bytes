@@ -23,6 +23,7 @@ go.work
 # Additional
 .[Bb]ackup
 cover.*
+coverage.*
 /s3bytes
 dist/
 *.pem
