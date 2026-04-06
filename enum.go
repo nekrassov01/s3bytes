@@ -9,15 +9,32 @@ import (
 type OutputType int
 
 const (
-	OutputTypeNone           OutputType = iota // The output type that means none.
-	OutputTypeJSON                             // The output type that means JSON format.
-	OutputTypePrettyJSON                       // The output type that means pretty JSON format.
-	OutputTypeText                             // The output type that means text format.
-	OutputTypeCompressedText                   // The output type that means compressed text format.
-	OutputTypeMarkdown                         // The output type that means markdown format.
-	OutputTypeBacklog                          // The output type that means backlog format.
-	OutputTypeTSV                              // The output type that means TSV format.
-	OutputTypeChart                            // The output type that means pie chart.
+	// OutputTypeNone is the output type that means none.
+	OutputTypeNone OutputType = iota
+
+	// OutputTypeJSON is the output type that means JSON format.
+	OutputTypeJSON
+
+	// OutputTypePrettyJSON is the output type that means pretty JSON format.
+	OutputTypePrettyJSON
+
+	// OutputTypeText is the output type that means text format.
+	OutputTypeText
+
+	// OutputTypeCompressedText is the output type that means compressed text format.
+	OutputTypeCompressedText
+
+	// OutputTypeMarkdown is the output type that means markdown format.
+	OutputTypeMarkdown
+
+	// OutputTypeBacklog is the output type that means backlog format.
+	OutputTypeBacklog
+
+	// OutputTypeTSV is the output type that means TSV format.
+	OutputTypeTSV
+
+	// OutputTypeChart is the output type that means pie chart.
+	OutputTypeChart
 )
 
 // String returns the string representation of the output type.
@@ -79,9 +96,14 @@ func ParseOutputType(s string) (OutputType, error) {
 type MetricName int
 
 const (
-	MetricNameNone            MetricName = iota // Metric name that means none.
-	MetricNameBucketSizeBytes                   // Metric name that means bucket size in bytes.
-	MetricNameNumberOfObjects                   // Metric name that means number of objects.
+	// MetricNameNone is the metric name that means none.
+	MetricNameNone MetricName = iota
+
+	//MetricNameBucketSizeBytes is the metric name that means bucket size in bytes.
+	MetricNameBucketSizeBytes
+
+	// MetricNameNumberOfObjects is the metric name that means number of objects.
+	MetricNameNumberOfObjects
 )
 
 // String returns the string representation of the metric name.
@@ -120,29 +142,80 @@ func ParseMetricName(s string) (MetricName, error) {
 type StorageType int
 
 const (
+
+	// StorageTypeNone is the storage type that means none.
 	StorageTypeNone StorageType = iota
+
+	// StorageTypeStandardStorage is the storage type that means standard storage.
 	StorageTypeStandardStorage
+
+	// StorageTypeIntelligentTieringFAStorage is the storage type that means intelligent tiering FA storage.
 	StorageTypeIntelligentTieringFAStorage
+
+	// StorageTypeIntelligentTieringIAStorage is the storage type that means intelligent tiering IA storage.
 	StorageTypeIntelligentTieringIAStorage
+
+	// StorageTypeIntelligentTieringAAStorage is the storage type that means intelligent tiering AA storage.
 	StorageTypeIntelligentTieringAAStorage
+
+	// StorageTypeIntelligentTieringAIAStorage is the storage type that means intelligent tiering AIA storage.
 	StorageTypeIntelligentTieringAIAStorage
+
+	// StorageTypeIntelligentTieringDAAStorage is the storage type that means intelligent tiering DAA storage.
 	StorageTypeIntelligentTieringDAAStorage
+
+	// StorageTypeStandardIAStorage is the storage type that means standard IA storage.
 	StorageTypeStandardIAStorage
+
+	// StorageTypeStandardIASizeOverhead is the storage type that means standard IA size overhead.
 	StorageTypeStandardIASizeOverhead
+
+	// StorageTypeStandardIAObjectOverhead is the storage type that means standard IA object overhead.
 	StorageTypeStandardIAObjectOverhead
+
+	// StorageTypeOneZoneIAStorage is the storage type that means one zone IA storage.
 	StorageTypeOneZoneIAStorage
+
+	// StorageTypeOneZoneIASizeOverhead is the storage type that means one zone IA size overhead.
 	StorageTypeOneZoneIASizeOverhead
+
+	// StorageTypeOneZoneIAObjectOverhead is the storage type that means one zone IA object overhead.
+	StorageTypeOneZoneIAObjectOverhead
+
+	// StorageTypeReducedRedundancyStorage is the storage type that means reduced redundancy storage.
 	StorageTypeReducedRedundancyStorage
+
+	// StorageTypeGlacierIRSizeOverhead is the storage type that means glacier IR size overhead.
 	StorageTypeGlacierIRSizeOverhead
+
+	// StorageTypeGlacierInstantRetrievalStorage is the storage type that means glacier instant retrieval storage.
 	StorageTypeGlacierInstantRetrievalStorage
+
+	// StorageTypeGlacierStorage is the storage type that means glacier storage.
 	StorageTypeGlacierStorage
+
+	// StorageTypeGlacierStagingStorage is the storage type that means glacier staging storage.
 	StorageTypeGlacierStagingStorage
+
+	// StorageTypeGlacierObjectOverhead is the storage type that means glacier object overhead.
 	StorageTypeGlacierObjectOverhead
+
+	// StorageTypeGlacierS3ObjectOverhead is the storage type that means glacier S3 object overhead.
 	StorageTypeGlacierS3ObjectOverhead
+
+	// StorageTypeDeepArchiveStorage is the storage type that means deep archive storage.
 	StorageTypeDeepArchiveStorage
+
+	// StorageTypeDeepArchiveObjectOverhead is the storage type that means deep archive object overhead.
 	StorageTypeDeepArchiveObjectOverhead
+
+	// StorageTypeDeepArchiveS3ObjectOverhead is the storage type that means deep archive S3 object overhead.
 	StorageTypeDeepArchiveS3ObjectOverhead
+
+	// StorageTypeDeepArchiveStagingStorage is the storage type that means deep archive staging storage.
 	StorageTypeDeepArchiveStagingStorage
+
+	// StorageTypeAllStorageTypes is the storage type that means all storage types.
 	StorageTypeAllStorageTypes
 )
 

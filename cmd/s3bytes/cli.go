@@ -7,24 +7,17 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/dustin/go-humanize"
-	sdk "github.com/nekrassov01/logger/aws"
+	"github.com/nekrassov01/logger/integrations/awssdk"
 	"github.com/nekrassov01/logger/log"
 	"github.com/nekrassov01/s3bytes"
 	"github.com/urfave/cli/v3"
 )
 
-const (
-	name  = "s3bytes"
-	label = "S3BYTES"
-)
+const name = "s3bytes"
 
-var (
-	logger = &log.Logger{}
-)
+var logger = log.NewLogger(log.NewCLIHandler(io.Discard))
 
 func newCmd(w, ew io.Writer) *cli.Command {
-	logger = log.NewLogger(log.NewCLIHandler(io.Discard))
-
 	profile := &cli.StringFlag{
 		Name:    "profile",
 		Aliases: []string{"p"},
@@ -36,7 +29,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		Name:    "log-level",
 		Aliases: []string{"l"},
 		Usage:   "set log level",
-		Sources: cli.EnvVars(label + "_LOG_LEVEL"),
+		Sources: cli.EnvVars("S3BYTES_LOG_LEVEL"),
 		Value:   slog.LevelInfo.String(),
 	}
 
@@ -78,7 +71,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		Name:    "output",
 		Aliases: []string{"o"},
 		Usage:   "set output type",
-		Sources: cli.EnvVars(label + "_OUTPUT_TYPE"),
+		Sources: cli.EnvVars("S3BYTES_OUTPUT_TYPE"),
 		Value:   s3bytes.OutputTypeCompressedText.String(),
 	}
 
@@ -104,7 +97,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 
 		// create logger for application
 		logger = log.NewLogger(log.NewCLIHandler(ew,
-			log.WithLabel("S3BYTES:"),
+			log.WithLabel("S3BYTES"),
 			log.WithTime(true),
 			withLevel,
 			withCaller,
@@ -112,8 +105,8 @@ func newCmd(w, ew io.Writer) *cli.Command {
 		))
 
 		// create logger for aws sdk
-		cfg.Logger = sdk.NewLogger(log.NewCLIHandler(ew,
-			log.WithLabel("SDK:"),
+		cfg.Logger = awssdk.NewLogger(log.NewCLIHandler(ew,
+			log.WithLabel("SDK"),
 			log.WithTime(false),
 			withLevel,
 			withCaller,
@@ -210,7 +203,7 @@ func newCmd(w, ew io.Writer) *cli.Command {
 
 	return &cli.Command{
 		Name:                  name,
-		Version:               getVersion(),
+		Version:               s3bytes.Version(),
 		Usage:                 "S3 size checker",
 		Description:           "Check the size of all buckets in S3 in one shot.",
 		HideHelpCommand:       true,

@@ -7,9 +7,11 @@
   },
   "markdownlint.run": "onType",
   "markdownlint.config": {
-    "MD010": false,
+    "MD022": false,
     "MD024": false,
+    "MD032": false,
     "MD033": false,
+    "MD034": false,
     "MD041": false
   },
   "go.lintTool": "golangci-lint",
