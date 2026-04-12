@@ -6,9 +6,9 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.14
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.56.0
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.98.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/go-echarts/go-echarts/v2 v2.7.1
+	github.com/go-echarts/go-echarts/v2 v2.7.2
 	github.com/google/go-cmp v0.7.0
 	github.com/nekrassov01/filter v0.0.8
 	github.com/nekrassov01/logger v0.0.9
