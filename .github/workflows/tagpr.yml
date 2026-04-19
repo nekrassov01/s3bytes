@@ -28,7 +28,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Run tagpr
-        uses: Songmu/tagpr@9d0f650553240dab1fa907eca27e3fd5b586e538 # v1.18.1
+        uses: Songmu/tagpr@9bbb945b2fb025126186661e27d55485e3fc6df6 # v1.18.3
         id: run-tagpr
   release:
     needs: tagpr
@@ -49,7 +49,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
+        uses: goreleaser/goreleaser-action@e24998b8b67b290c2fa8b7c14fcfa7de2c5c9b8c # v7.1.0
         with:
           distribution: goreleaser
           version: latest
