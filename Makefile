@@ -1,12 +1,11 @@
 NAME := s3bytes
+CMD_PATH := ./cmd/s3bytes/
 
-PKG := github.com/nekrassov01/$(NAME)
-CMD_PATH := ./cmd/$(NAME)/
 GOBIN ?= $(shell go env GOPATH)/bin
 
 VERSION := $$(make version)
 REVISION := $$(make revision)
-LDFLAGS := "-s -w -X $(PKG).version=$(VERSION) -X $(PKG).revision=$(REVISION)"
+LDFLAGS := "-s -w -X github.com/nekrassov01/s3bytes.version=$(VERSION) -X github.com/nekrassov01/s3bytes.revision=$(REVISION)"
 
 HAS_LINT := $(shell command -v $(GOBIN)/golangci-lint 2> /dev/null)
 HAS_VULN := $(shell command -v $(GOBIN)/govulncheck 2> /dev/null)
@@ -18,7 +17,7 @@ BIN_BUMP := github.com/x-motemen/gobump/cmd/gobump@latest
 
 export GO111MODULE=on
 
-.PHONY: deps deps-lint deps-vuln deps-bump clean build check test cover bench lint vuln version revision check-git bump
+.PHONY: deps deps-lint deps-vuln deps-bump clean build check test cover bench lint vuln version revision check-git check-branch bump
 
 # -------
 #  deps
@@ -61,13 +60,13 @@ build: clean
 check: test cover bench lint vuln
 
 test:
-	go test -race -cover -v -coverprofile=coverage.out -covermode=atomic ./...
+	go test -race -cover -v -coverprofile coverage.out -covermode atomic ./...
 
 cover:
-	go tool cover -html=coverage.out -o coverage.html
+	go tool cover -html coverage.out -o coverage.html
 
 bench:
-	go test -bench . -benchmem -count 5 -benchtime=10000x -cpuprofile=cpu.prof -memprofile=mem.prof
+	go test -bench -benchmem -count 5 -benchtime 10000x -cpuprofile cpu.prof -memprofile mem.prof .
 
 lint: deps-lint
 	golangci-lint run --verbose ./...
@@ -80,7 +79,7 @@ vuln: deps-vuln
 # ----------
 
 version: deps-bump
-	@echo $(shell gobump show -r)
+	@echo $(shell gobump show -r .)
 
 revision: deps-bump
 	@echo $(shell git rev-parse --short HEAD)
@@ -90,7 +89,12 @@ ifneq ($(shell git status --porcelain),)
 	$(error git workspace is dirty)
 endif
 
-bump: check-git deps-bump
-	gobump up -w
+check-branch:
+ifndef branch
+	$(error branch is undefined)
+endif
+
+bump: check-branch deps-bump
+	gobump up -w .
 	git commit -am "bump up version to $(VERSION)"
-	git push origin main
+	git push origin $(branch)
