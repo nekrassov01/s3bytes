@@ -3,7 +3,7 @@ package s3bytes
 import "fmt"
 
 // version is the current version.
-const version = "0.1.1"
+const version = "0.1.2"
 
 // revision is the git revision.
 var revision = ""
