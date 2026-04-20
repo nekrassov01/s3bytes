@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.1.2](https://github.com/nekrassov01/s3bytes/compare/v0.1.1...v0.1.2) - 2026-04-20
+- Update for common settings for gh-infra by @nekrassov01 in https://github.com/nekrassov01/s3bytes/pull/8
+
 ## [v0.1.1](https://github.com/nekrassov01/s3bytes/compare/v0.1.0...v0.1.1) - 2026-04-06
 
 ## [v0.1.0](https://github.com/nekrassov01/s3bytes/compare/v0.0.18...v0.1.0) - 2026-04-06
